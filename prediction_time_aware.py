@@ -13,18 +13,7 @@ from sklearn.model_selection import train_test_split
 PLOT_FOLDER = "plot_timed_fractions"
 os.makedirs(PLOT_FOLDER, exist_ok=True)
 
-#FOLD_BOUNDARIES = {
-#    1: datetime(2022, 11, 30),
-#    2: datetime(2023, 7, 31),
-#    3: datetime(2023, 12, 31),
-#    4: datetime(2025, 12, 31)  # placeholder for all later data
-#}
-# FOLD_BOUNDARIES = {
-#     1: datetime(2022, 6, 30),
-#     2: datetime(2023, 7, 31),
-#     3: datetime(2024, 7, 31),
-#     4: datetime(2025, 7, 31)  # placeholder
-# }
+
 FOLD_BOUNDARIES = {
     1: datetime(2022, 11, 30),  # Captures PoCs up to this date (~30 samples)
     2: datetime(2023, 8, 10),   # Captures the next burst of PoCs (~32 samples)

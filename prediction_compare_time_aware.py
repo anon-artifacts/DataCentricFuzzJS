@@ -8,12 +8,7 @@ from scipy.stats import wilcoxon
 from joblib import Parallel, delayed
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
-#FOLD_BOUNDARIES = {
-#    1: datetime(2022, 11, 30),
-#    2: datetime(2023, 7, 31),
-#    3: datetime(2023, 12, 31),
-#    4: datetime(2025, 12, 31)  # placeholder
-#}
+
 FOLD_BOUNDARIES = {
     1: datetime(2022, 11, 30),  # Captures PoCs up to this date (~30 samples)
     2: datetime(2023, 8, 10),   # Captures the next burst of PoCs (~32 samples)
@@ -275,7 +270,7 @@ if __name__ == "__main__":
         for method, features in feature_sets.items():
             args_list.append((method, features, run, pos_folds, neg_df))
 
-    parallel_results = Parallel(n_jobs=-1, verbose=10)(
+    parallel_results = Parallel(n_jobs=-1, backend='threading', verbose=10)(
         delayed(run_single_run)(args) for args in args_list
     )
 
