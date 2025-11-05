@@ -1,0 +1,18 @@
+var re = /a/g;
+var str = "bbbbabbbbabbbb";
+re.test(str);
+re.lastIndex;
+re.lastIndex = 0;
+re.test(str);
+re.lastIndex;
+re.lastIndex = 0;
+re.test(str);
+re.lastIndex;
+(re = /a/g).exec(str);
+re.lastIndex;
+re.lastIndex = 0;
+re.exec(str);
+re.lastIndex;
+re.lastIndex = 0;
+re.exec(str);
+re.lastIndex;

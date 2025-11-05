@@ -1,0 +1,10 @@
+function f0() {
+}
+var BUGNUMBER = 325925;
+var summary = "Do not Assert: c <= cs->length in AddCharacterToCharSet";
+var actual = "No Crash";
+var expect = "No Crash";
+f0(BUGNUMBER);
+f0(summary);
+/[\cA]/.exec("");
+f0(expect, actual, summary);

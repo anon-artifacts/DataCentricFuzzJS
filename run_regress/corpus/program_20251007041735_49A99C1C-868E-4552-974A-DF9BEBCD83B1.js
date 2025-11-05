@@ -1,0 +1,2 @@
+%PrepareFunctionForOptimization(Array);
+%OptimizeMaglevOnNextCall(Array);

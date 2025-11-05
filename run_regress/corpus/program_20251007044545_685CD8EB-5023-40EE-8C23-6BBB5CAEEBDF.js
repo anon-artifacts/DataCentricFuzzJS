@@ -1,0 +1,12 @@
+var a = {};
+Error.captureStackTrace(a, Error);
+a.stack = 1;
+const v5 = new Error();
+var b = v5;
+b.stack = 1;
+b.stack = 1;
+const v9 = new Error();
+var c = v9;
+var old_stack = c.stack;
+c.stack = 1;
+c.stack = 1;

@@ -1,0 +1,61 @@
+poc_filename,v8_version_tested,issue_report_date,flags_used,crashed,log_file
+exploit_40095575.js,7.0.112,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.0.112.log
+exploit_40095575.js,7.1.3,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.1.3.log
+exploit_40095575.js,7.1.218,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.1.218.log
+exploit_40095575.js,7.2.211,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.2.211.log
+exploit_40095575.js,7.3.258,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.3.258.log
+exploit_40095575.js,7.4.46,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.4.46.log
+exploit_40095575.js,7.4.256,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.4.256.log
+exploit_40095575.js,7.5.149,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.5.149.log
+exploit_40095575.js,7.6.75,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.6.75.log
+exploit_40095575.js,7.6.296.1,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.6.296.1.log
+exploit_40095575.js,7.7.166,2019-07-02,--experimental-wasm-anyref,FALSE,reproduce_logs/exploit_40095575.js-7.7.166.log
+expl_330575498.js,11.4.45,2024-03-21,--module --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/expl_330575498.js-11.4.45.log
+expl_330575498.js,11.5.10,2024-03-21,--module --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/expl_330575498.js-11.5.10.log
+expl_330575498.js,11.6.41,2024-03-21,--module --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/expl_330575498.js-11.6.41.log
+expl_330575498.js,11.7.68,2024-03-21,--module --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/expl_330575498.js-11.7.68.log
+expl_330575498.js,11.7.359.1,2024-03-21,--module --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/expl_330575498.js-11.7.359.1.log
+expl_330575498.js,11.8.149,2024-03-21,--module --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/expl_330575498.js-11.8.149.log
+expl_330575498.js,11.9.168,2024-03-21,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/expl_330575498.js-11.9.168.log
+expl_330575498.js,12.1.22,2024-03-21,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/expl_330575498.js-12.1.22.log
+expl_330575498.js,12.1.271,2024-03-21,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/expl_330575498.js-12.1.271.log
+expl_330575498.js,12.2.156,2024-03-21,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/expl_330575498.js-12.2.156.log
+expl_330575498.js,12.3.91,2024-03-21,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/expl_330575498.js-12.3.91.log
+expl_330575498.js,12.4.126,2024-03-21,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/expl_330575498.js-12.4.126.log
+fail_40090935.js,6.6.353,2018-03-27,--enable-slow-asserts --expose-gc --allow-natives-syntax ../../v8/v8/test/mjsunit/mjsunit.js test/mjsunit/wasm/wasm-constants.js ../../v8/v8/test/mjsunit/wasm/wasm-module-builder.js fail.js,FALSE,reproduce_logs/fail_40090935.js-6.6.353.log
+helper1_342602616.js,11.6.41,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-11.6.41.log
+helper1_342602616.js,11.7.68,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-11.7.68.log
+helper1_342602616.js,11.7.359.1,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-11.7.359.1.log
+helper1_342602616.js,11.8.149,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-11.8.149.log
+helper1_342602616.js,11.9.168,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-11.9.168.log
+helper1_342602616.js,12.1.22,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-12.1.22.log
+helper1_342602616.js,12.1.271,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-12.1.271.log
+helper1_342602616.js,12.2.156,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-12.2.156.log
+helper1_342602616.js,12.3.91,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-12.3.91.log
+helper1_342602616.js,12.4.126,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-12.4.126.log
+helper1_342602616.js,12.5.129,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-12.5.129.log
+helper1_342602616.js,12.6.144,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper1_342602616.js-12.6.144.log
+helper2_342602616.js,11.6.41,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-11.6.41.log
+helper2_342602616.js,11.7.68,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-11.7.68.log
+helper2_342602616.js,11.7.359.1,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-11.7.359.1.log
+helper2_342602616.js,11.8.149,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-11.8.149.log
+helper2_342602616.js,11.9.168,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-11.9.168.log
+helper2_342602616.js,12.1.22,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-12.1.22.log
+helper2_342602616.js,12.1.271,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-12.1.271.log
+helper2_342602616.js,12.2.156,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-12.2.156.log
+helper2_342602616.js,12.3.91,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-12.3.91.log
+helper2_342602616.js,12.4.126,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-12.4.126.log
+helper2_342602616.js,12.5.129,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-12.5.129.log
+helper2_342602616.js,12.6.144,2024-05-24,--future --jit-fuzzing --allow-natives-syntax /mnt/c/Users/asus/Downloads/ALFuzz/poc_negatives_updated/original.wasm,FALSE,reproduce_logs/helper2_342602616.js-12.6.144.log
+min_340221135.js,11.6.41,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-11.6.41.log
+min_340221135.js,11.7.68,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-11.7.68.log
+min_340221135.js,11.7.359.1,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-11.7.359.1.log
+min_340221135.js,11.8.149,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-11.8.149.log
+min_340221135.js,11.9.168,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-11.9.168.log
+min_340221135.js,12.1.22,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-12.1.22.log
+min_340221135.js,12.1.271,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-12.1.271.log
+min_340221135.js,12.2.156,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-12.2.156.log
+min_340221135.js,12.3.91,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-12.3.91.log
+min_340221135.js,12.4.126,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-12.4.126.log
+min_340221135.js,12.5.129,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-12.5.129.log
+min_340221135.js,12.6.144,2024-05-13,--module --allow-natives-syntax --expose-gc,TRUE,reproduce_logs/min_340221135.js-12.6.144.log

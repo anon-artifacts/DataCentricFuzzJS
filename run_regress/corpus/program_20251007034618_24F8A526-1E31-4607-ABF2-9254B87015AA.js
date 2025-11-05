@@ -1,0 +1,13 @@
+const v1 = new Map();
+var m = v1;
+m.delete(3);
+m.size;
+m.set({}, "ok");
+m.set(Math, "ok");
+m.size;
+m.delete({});
+m.size;
+m.delete(Math);
+m.size;
+m.delete(Math);
+m.size;

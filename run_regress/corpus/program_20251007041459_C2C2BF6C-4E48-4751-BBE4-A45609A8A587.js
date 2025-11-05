@@ -1,0 +1,16 @@
+("abcdefg").match(/(x)y(z)/g);
+RegExp.$1;
+("abcdef").match(/a(b)cd/g)[0];
+RegExp.$1;
+RegExp.$2;
+("abcdef").match(/(a)b(c)/g);
+RegExp.$1;
+RegExp.$2;
+RegExp.$3;
+("abcabdabe").match(/(a)b(.)/g);
+RegExp.$1;
+RegExp.$2;
+("abcdefg").match(/(x)y(z)/g);
+RegExp.$1;
+("abcdefg").match(/(g)/g);
+RegExp.$1;

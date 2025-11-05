@@ -1,0 +1,12 @@
+const v5 = new Map([["a",1]]);
+var map = v5;
+var res = map[Symbol.iterator]().next();
+["a",1];
+const t3 = res.value;
+t3[0] = "b";
+const t6 = res.value;
+t6[1] = 2;
+["b",2];
+map.get("a");
+map.has("b");
+map.size;

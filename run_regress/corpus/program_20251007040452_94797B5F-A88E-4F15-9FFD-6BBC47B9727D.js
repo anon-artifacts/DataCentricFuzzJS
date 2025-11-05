@@ -1,0 +1,34 @@
+function setelem(a1, a2, a3) {
+    a1[a2] = a3;
+}
+const v5 = new Array();
+var arr = v5;
+var obj = {};
+setelem(arr, "prop0", 2);
+setelem(arr, 0, 2);
+setelem(arr, 1, 1);
+setelem(arr, 0, 0);
+setelem(arr, 2, 2);
+setelem(arr, 4, 4);
+setelem(arr, "prop0", 0);
+setelem(arr, "prop1", 1);
+setelem(obj, "prop0", 2);
+setelem(obj, 0, 2);
+setelem(obj, 1, 1);
+setelem(obj, 0, 0);
+setelem(obj, 2, 2);
+setelem(obj, 4, 4);
+setelem(obj, "prop0", 0);
+setelem(obj, "prop1", 1);
+arr.prop0;
+arr.prop1;
+arr[0];
+arr[1];
+arr[2];
+arr[4];
+obj.prop0;
+obj.prop1;
+obj[0];
+obj[1];
+obj[2];
+obj[4];

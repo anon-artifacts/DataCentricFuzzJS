@@ -1,0 +1,628 @@
+
+=== Running v8-10.1.124 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.2.154 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.5.218 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.6.194 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.7.1 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.7.193 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.8.169 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.9.1 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-10.9.194 ===
+console.assert: 
+----------------------------------------
+
+=== Running v8-11.5.150 ===
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+9 pending unhandled Promise rejection(s) detected.
+----------------------------------------
+
+=== Running v8-11.8.172 ===
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+9 pending unhandled Promise rejection(s) detected.
+----------------------------------------
+
+=== Running v8-12.0.267 ===
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+9 pending unhandled Promise rejection(s) detected.
+----------------------------------------
+
+=== Running v8-12.1.285 ===
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+9 pending unhandled Promise rejection(s) detected.
+----------------------------------------
+
+=== Running v8-12.8.374 ===
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+9 pending unhandled Promise rejection(s) detected.
+----------------------------------------
+
+=== Running v8-12.9.1 ===
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166: TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    obj[random_function]()
+                        ^
+TypeError: WebAssembly.instantiate(): Argument 0 must be a buffer source or a WebAssembly.Module object
+    at __callRandomFunction (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:166:25)
+    at __f_19420 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:187:5)
+    at __f_19417 (poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:179:21)
+    at poc_negatives_updated/clusterfuzz-testcase-minimized-5686835111657472_40095393.js:192:3
+
+9 pending unhandled Promise rejection(s) detected.
+----------------------------------------
+
+=== Running v8-13.9.1 ===
+----------------------------------------
+
+=== Running v8-6.2.414 ===
+Warning: unknown flag --wasm-code-gc.
+Try --help for options
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------
+
+=== Running v8-7.2.502 ===
+Warning: unknown flag --wasm-code-gc.
+Try --help for options
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------
+
+=== Running v8-7.5.1 ===
+Warning: unknown flag --wasm-code-gc.
+Try --help for options
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------
+
+=== Running v8-7.5.288 ===
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------
+
+=== Running v8-7.9.317 ===
+----------------------------------------
+
+=== Running v8-8.7.220 ===
+----------------------------------------
+
+=== Running v8-8.8.278 ===
+----------------------------------------
+
+=== Running v8-8.9.255 ===
+----------------------------------------
+
+=== Running v8-9.2.230 ===
+----------------------------------------
+
+=== Running v8-9.9.114 ===
+----------------------------------------
+
+=== Running v8-9.9.115 ===
+----------------------------------------
+
+=== Running v8-debug ===
+----------------------------------------
+
+=== Running v8-debug-13.8.260 ===
+----------------------------------------
+
+=== Running v8-debug-6.1.534 ===
+Warning: unknown flag --wasm-code-gc.
+Try --help for options
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------
+
+=== Running v8-debug-7.0.276 ===
+Warning: unknown flag --wasm-code-gc.
+Try --help for options
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------
+
+=== Running v8-debug-7.2.502 ===
+Warning: unknown flag --wasm-code-gc.
+Try --help for options
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------
+
+=== Running v8-debug-7.5.288 ===
+Warning: unknown flag --stress-wasm-code-gc.
+Try --help for options
+----------------------------------------

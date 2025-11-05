@@ -1,0 +1,11 @@
+const v8 = new Map([["a",1],["b",2]]);
+var map = v8;
+var iter = map[Symbol.iterator]();
+var a = iter.next();
+var b = iter.next();
+["a",1];
+["b",2];
+a.value !== b.value;
+var a1 = map[Symbol.iterator]();
+["a",1];
+a.value !== a1.value;

@@ -1,0 +1,11 @@
+const v2 = new Int16Array(23);
+var array = v2;
+array[7] = 7;
+array[9] = 9;
+array.length;
+array[7];
+array[9];
+Array.prototype.sort.call(array);
+array.length;
+array[21];
+array[22];

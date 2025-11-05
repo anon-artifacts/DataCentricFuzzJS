@@ -1,0 +1,34 @@
+undefined == undefined;
+undefined <= undefined;
+undefined >= undefined;
+undefined < undefined;
+undefined > undefined;
+null == null;
+null <= null;
+null >= null;
+null < null;
+null > null;
+void 0 == void 0;
+void 0 <= void 0;
+void 0 >= void 0;
+void 0 < void 0;
+void 0 > void 0;
+var x = void 0;
+x == x;
+x <= x;
+x >= x;
+x < x;
+x > x;
+var not_undefined = [null,0,1,1 / 0,-1 / 0,"",true,false];
+for (let i99 = 0; i99 < not_undefined.length; i99++) {
+    (x = not_undefined[i99]) == x;
+    ("" + 21) + x;
+    x <= x;
+    ("" + 22) + x;
+    x >= x;
+    ("" + 23) + x;
+    x < x;
+    ("" + 24) + x;
+    x > x;
+    ("" + 25) + x;
+}

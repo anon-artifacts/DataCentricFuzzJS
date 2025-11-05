@@ -1,0 +1,252 @@
+<svg width="1200" height="1500" viewBox="0 0 1200 1500" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+    <!-- 
+      LLM-Feat Framework Diagram - Publication Quality
+      Version 8: Corrected arrow routing to prevent overlaps for improved clarity.
+      - Utilizes icons for intuitive understanding.
+      - Employs a strict top-to-bottom, non-crossing layout.
+      - Refined color palette and typography for a professional aesthetic.
+    -->
+    <defs>
+        <style>
+            .box { stroke: #BEE3F8; stroke-width: 1; rx: 8; ry: 8; }
+            .title-text { font-size: 13px; font-weight: 600; fill: #1A202C; }
+            .body-text { font-size: 11px; fill: #4A5567; }
+            .label-text { font-size: 11px; fill: #718096; }
+            
+            .llm-box { fill: #EBF8FF; stroke: #90CDF4; }
+            .output-box { fill: #E6FFFA; stroke: #4FD1C5; }
+            .action-box { fill: #FEFCBF; stroke: #F6E05E; }
+            .input-box { fill: #E9D8FD; stroke: #B794F4; }
+            .info-box { fill: #F7FAFC; stroke: #E2E8F0; }
+            .final-box { fill: #C6F6D5; stroke: #68D391; stroke-width: 1.5; }
+            .phase-title { font-size: 16px; font-weight: 700; fill: #2D3748; }
+
+            .arrow-line { stroke: #A0AEC0; stroke-width: 1.5; fill: none; }
+            .icon { fill: #4A5567; }
+        </style>
+        <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#A0AEC0"/>
+        </marker>
+        
+        <!-- Icons -->
+        <g id="icon-db">
+            <path class="icon" d="M12 3C7.03 3 3 4.79 3 7v10c0 2.21 4.03 4 9 4s9-1.79 9-4V7c0-2.21-4.03-4-9-4zm0 2c4.12 0 7.45 1.19 8.23 2.19C19.45 8.19 16.12 9 12 9S4.55 8.19 3.77 7.19C4.55 6.19 7.88 5 12 5zm0 14c-4.12 0-7.45-1.19-8.23-2.19C4.55 15.81 7.88 15 12 15s7.45.81 8.23 1.81C19.45 17.81 16.12 19 12 19zM3 12v-2.5c0 .31.12.61.34.86C4.12 11.19 7.88 12 12 12s7.88-.81 8.66-1.64c.22-.25.34-.55.34-.86V12c0 2.21-4.03 4-9 4s-9-1.79-9-4z"/>
+        </g>
+        <g id="icon-filter">
+            <path class="icon" d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+        </g>
+        <g id="icon-bug">
+            <path class="icon" d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5s-.96.06-1.42.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/>
+        </g>
+        <g id="icon-llm">
+            <path class="icon" d="M19.5 10.5c0 4.2-2.9 7.7-6.8 8.3L12.5 17h-1l-.2 1.8c-3.9-.6-6.8-4.1-6.8-8.3C4.5 6.36 7.86 3 12 3s7.5 3.36 7.5 7.5zM12 5c-2.83 0-5.22 1.93-5.83 4.5H11V7h2v2.5h4.83C17.22 6.93 14.83 5 12 5zM8 15.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5S10.33 14 9.5 14s-1.5.67-1.5 1.5zm5 0c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5S15.33 14 14.5 14s-1.5.67-1.5 1.5z"/>
+        </g>
+        <g id="icon-code">
+            <path class="icon" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+        </g>
+        <g id="icon-regex">
+            <path class="icon" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </g>
+        <g id="icon-vector">
+            <path class="icon" d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
+        </g>
+        <g id="icon-model">
+            <path class="icon" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-4h2v4zm4 0h-2v-2h2v2zm0-4h-2V9h2v4zm4 4h-2v-6h2v6z"/>
+        </g>
+    </defs>
+
+    <!-- Main Title -->
+    <text x="600" y="35" text-anchor="middle" font-size="24" font-weight="bold" fill="#1A202C">LLM-Feat Framework Overview</text>
+
+    <!-- === PHASE 0: DATA COLLECTION & PREPROCESSING === -->
+    <rect x="25" y="70" width="1150" height="200" rx="10" ry="10" fill="#F7FAFC" stroke="#E2E8F0"/>
+    <text x="600" y="95" text-anchor="middle" class="phase-title">Phase 0: Data Collection &amp; Preprocessing</text>
+
+    <g id="data-collection-flow">
+        <g transform="translate(100, 130)">
+            <rect x="0" y="0" width="180" height="70" class="box info-box"/>
+            <use href="#icon-db" x="78" y="8" width="24" height="24"/>
+            <text x="90" y="55" text-anchor="middle" class="title-text">Chromium Issue Tracker</text>
+        </g>
+        <path class="arrow-line" d="M 280 165 H 330" marker-end="url(#arrowhead)"/>
+        
+        <g transform="translate(330, 130)">
+            <rect x="0" y="0" width="180" height="70" class="box action-box"/>
+            <use href="#icon-filter" x="78" y="8" width="24" height="24"/>
+            <text x="90" y="55" text-anchor="middle" class="title-text">Filter &amp; Collect</text>
+            <text x="90" y="70" text-anchor="middle" class="label-text">220 Issues Found</text>
+        </g>
+        <path class="arrow-line" d="M 510 165 H 560" marker-end="url(#arrowhead)"/>
+
+        <g transform="translate(560, 130)">
+            <rect x="0" y="0" width="180" height="70" class="box action-box"/>
+            <use href="#icon-bug" x="78" y="8" width="24" height="24"/>
+            <text x="90" y="55" text-anchor="middle" class="title-text">Replicate PoCs</text>
+            <text x="90" y="70" text-anchor="middle" class="label-text">190 Bugs Replicated</text>
+        </g>
+        <path class="arrow-line" d="M 740 165 H 790" marker-end="url(#arrowhead)"/>
+
+        <g transform="translate(790, 130)">
+            <rect x="0" y="0" width="180" height="70" class="box output-box"/>
+            <use href="#icon-code" x="78" y="8" width="24" height="24"/>
+            <text x="90" y="55" text-anchor="middle" class="title-text">Final Dataset</text>
+        </g>
+        <path class="arrow-line" d="M 880 200 V 220" marker-end="url(#arrowhead)"/>
+
+        <!-- Data Split -->
+        <rect x="770" y="220" width="220" height="30" class="box action-box"/>
+        <text x="880" y="240" text-anchor="middle" class="title-text">Randomly Split Dataset</text>
+        
+        <path class="arrow-line" d="M 770 235 H 300 V 350" marker-end="url(#arrowhead)"/>
+        <text x="535" y="330" text-anchor="middle" class="label-text">30 PoCs for Feature Gen</text>
+        
+        <path class="arrow-line" d="M 990 235 H 1185 V 900 H 1100" marker-end="url(#arrowhead)"/>
+        <text x="1140" y="568" text-anchor="middle" transform="rotate(90, 1140, 568)" class="label-text">160 PoCs for Vectorization</text>
+    </g>
+
+    <!-- === PHASE 1 & 2 HEADERS === -->
+    <rect x="25" y="300" width="550" height="500" rx="10" ry="10" fill="#F7FAFC" stroke="#E2E8F0"/>
+    <text x="300" y="325" text-anchor="middle" class="phase-title">Phase 1: Static Feature Generation</text>
+    
+    <rect x="625" y="300" width="550" height="500" rx="10" ry="10" fill="#F7FAFC" stroke="#E2E8F0"/>
+    <text x="900" y="325" text-anchor="middle" class="phase-title">Phase 2: Dynamic Feature Generation</text>
+
+    <!-- === STATIC PIPELINE === -->
+    <g id="static-pipeline">
+        <rect x="175" y="350" width="250" height="50" class="box input-box"/>
+        <text x="300" y="370" text-anchor="middle" class="title-text">Input: 30 PoCs</text>
+        <text x="300" y="388" text-anchor="middle" class="body-text">For Active Learning Loop</text>
+        <path class="arrow-line" d="M 300 400 V 430" marker-end="url(#arrowhead)"/>
+
+        <rect x="100" y="430" width="400" height="220" rx="8" ry="8" fill="#FFFFFF" stroke="#A0AEC0"/>
+        <text x="300" y="450" text-anchor="middle" class="title-text" font-size="14px">Active Learning Loop</text>
+        <g transform="translate(140, 470)">
+            <rect x="0" y="0" width="320" height="40" class="box action-box"/>
+            <text x="160" y="25" text-anchor="middle" class="body-text">1. Classify PoC with current feature set</text>
+        </g>
+        <text x="190" y="535" text-anchor="middle" class="label-text">On Misprediction:</text>
+        <path class="arrow-line" d="M 220 510 V 540" marker-end="url(#arrowhead)"/>
+        <g transform="translate(200, 540)">
+            <rect x="0" y="0" width="200" height="50" class="box llm-box"/>
+            <use href="#icon-llm" x="10" y="13" width="24" height="24"/>
+            <text x="115" y="23" text-anchor="middle" class="body-text">2. Run <tspan font-weight="600">Prompt 1</tspan></text>
+            <text x="115" y="38" text-anchor="middle" class="body-text">to get new features</text>
+        </g>
+        <path class="arrow-line" d="M 300 590 V 600" marker-end="url(#arrowhead)"/>
+        <g transform="translate(200, 600)">
+            <rect x="0" y="0" width="200" height="40" class="box action-box"/>
+            <text x="100" y="25" text-anchor="middle" class="body-text">3. Augment Feature Set</text>
+        </g>
+        <path class="arrow-line" d="M 400 620 H 450 V 490 H 400" marker-end="url(#arrowhead)"/>
+        <text x="450" y="555" text-anchor="middle" class="label-text">Loop</text>
+        <path class="arrow-line" d="M 300 650 V 680" marker-end="url(#arrowhead)"/>
+
+        <rect x="100" y="680" width="400" height="50" class="box output-box"/>
+        <use href="#icon-regex" x="110" y="693" width="24" height="24"/>
+        <text x="290" y="700" text-anchor="middle" class="title-text">Final Static Feature Set (Regex)</text>
+        <text x="290" y="718" text-anchor="middle" class="body-text">Master list of all generalized static features</text>
+    </g>
+
+    <!-- === DYNAMIC PIPELINE === -->
+    <g id="dynamic-pipeline">
+        <path class="arrow-line" d="M 500 705 H 675" marker-end="url(#arrowhead)"/>
+        <text x="587.5" y="700" class="label-text">Input for Clustering</text>
+        
+        <rect x="675" y="350" width="450" height="400" rx="8" ry="8" fill="#FFFFFF" stroke="#A0AEC0"/>
+        <text x="900" y="370" text-anchor="middle" class="title-text" font-size="14px">Dynamic Feature Derivation (Chain of Prompts)</text>
+
+        <g transform="translate(700, 390)">
+            <rect x="0" y="0" width="400" height="50" class="box llm-box"/>
+            <use href="#icon-llm" x="10" y="13" width="24" height="24"/>
+            <text x="200" y="25" text-anchor="middle" class="title-text">Prompt 2: Clustering</text>
+            <text x="200" y="42" text-anchor="middle" class="body-text">Output: Semantic Feature Clusters</text>
+        </g>
+        <path class="arrow-line" d="M 900 440 V 460" marker-end="url(#arrowhead)"/>
+
+        <g transform="translate(700, 460)">
+            <rect x="0" y="0" width="400" height="50" class="box llm-box"/>
+            <use href="#icon-llm" x="10" y="13" width="24" height="24"/>
+            <text x="200" y="25" text-anchor="middle" class="title-text">Prompt 3: V8 Flag ID</text>
+            <text x="200" y="42" text-anchor="middle" class="body-text">Output: Top 5 V8 Flags for tracing</text>
+        </g>
+        <path class="arrow-line" d="M 900 510 V 530" marker-end="url(#arrowhead)"/>
+
+        <g transform="translate(700, 530)">
+            <rect x="0" y="0" width="400" height="50" class="box llm-box"/>
+            <use href="#icon-llm" x="10" y="13" width="24" height="24"/>
+            <text x="200" y="25" text-anchor="middle" class="title-text">Prompt 4: Trace Statement Extraction</text>
+            <text x="200" y="42" text-anchor="middle" class="body-text">Output: C++ printf statements from V8 source</text>
+        </g>
+        <path class="arrow-line" d="M 900 580 V 600" marker-end="url(#arrowhead)"/>
+
+        <g transform="translate(700, 600)">
+            <rect x="0" y="0" width="400" height="50" class="box llm-box"/>
+            <use href="#icon-llm" x="10" y="13" width="24" height="24"/>
+            <text x="200" y="25" text-anchor="middle" class="title-text">Prompt 5: Regex Generation</text>
+            <text x="200" y="42" text-anchor="middle" class="body-text">Output: Parsers for trace logs</text>
+        </g>
+        <path class="arrow-line" d="M 900 650 V 680" marker-end="url(#arrowhead)"/>
+        
+        <rect x="700" y="680" width="400" height="50" class="box output-box"/>
+        <use href="#icon-regex" x="710" y="693" width="24" height="24"/>
+        <text x="890" y="700" text-anchor="middle" class="title-text">Final Dynamic Parsers (Regex)</text>
+        <text x="890" y="718" text-anchor="middle" class="body-text">Tools to parse dynamic trace logs</text>
+    </g>
+
+    <!-- === PHASE 3: VECTORIZATION === -->
+    <rect x="25" y="830" width="1150" height="300" rx="10" ry="10" fill="#F7FAFC" stroke="#E2E8F0"/>
+    <text x="600" y="855" text-anchor="middle" class="phase-title">Phase 3: Vectorization of Training/Testing Data</text>
+
+    <!-- Inputs to Phase 3 -->
+    <path class="arrow-line" d="M 300 730 V 880" marker-end="url(#arrowhead)"/>
+    <text x="315" y="805" class="label-text">Static Regex Set</text>
+    <path class="arrow-line" d="M 900 730 V 880" marker-end="url(#arrowhead)"/>
+    <text x="915" y="805" class="label-text">Dynamic Parsers</text>
+
+    <g id="vectorization-process">
+        <rect x="100" y="880" width="1000" height="220" rx="8" ry="8" fill="#FFFFFF" stroke="#A0AEC0"/>
+        <text x="600" y="900" text-anchor="middle" class="title-text" font-size="14px">For each of the 160 PoCs:</text>
+
+        <rect x="150" y="920" width="250" height="50" class="box action-box"/>
+        <text x="275" y="948" text-anchor="middle" class="title-text">1. Apply Static Regex</text>
+        <path class="arrow-line" d="M 275 970 V 990" marker-end="url(#arrowhead)"/>
+        <rect x="200" y="990" width="150" height="40" class="box final-box"/>
+        <text x="275" y="1015" text-anchor="middle" class="body-text">Static Vector</text>
+
+        <rect x="475" y="920" width="250" height="50" class="box action-box"/>
+        <text x="600" y="948" text-anchor="middle" class="title-text">2. Execute &amp; Parse Trace</text>
+        <path class="arrow-line" d="M 600 970 V 990" marker-end="url(#arrowhead)"/>
+        <rect x="525" y="990" width="150" height="40" class="box final-box"/>
+        <text x="600" y="1015" text-anchor="middle" class="body-text">Dynamic Vector</text>
+
+        <path class="arrow-line" d="M 350 1010 H 425" marker-end="url(#arrowhead)"/>
+        <path class="arrow-line" d="M 525 1010 H 425" marker-end="url(#arrowhead)"/>
+        <rect x="350" y="1040" width="150" height="50" class="box action-box"/>
+        <text x="425" y="1068" text-anchor="middle" class="title-text">3. Concatenate</text>
+
+        <rect x="800" y="920" width="250" height="110" class="box final-box" style="stroke-width: 2.5; stroke: #7B34DD; fill: #E9D8FD;"/>
+        <text x="925" y="975" text-anchor="middle" class="title-text" font-size="16px">Hybrid Feature Vector</text>
+        <path class="arrow-line" d="M 500 1065 H 800" marker-end="url(#arrowhead)"/>
+    </g>
+    
+    <path class="arrow-line" d="M 600 1100 V 1150" marker-end="url(#arrowhead)"/>
+    <text x="615" y="1130" class="label-text">Repeat for all PoCs</text>
+    
+    <rect x="400" y="1150" width="400" height="50" class="box output-box"/>
+    <text x="600" y="1170" text-anchor="middle" class="title-text">Final Dataset</text>
+    <text x="600" y="1188" text-anchor="middle" class="body-text">160 Labeled Hybrid Feature Vectors</text>
+
+    <!-- === PHASE 4: MODEL TRAINING === -->
+    <rect x="25" y="1210" width="1150" height="150" rx="10" ry="10" fill="#F7FAFC" stroke="#E2E8F0"/>
+    <text x="600" y="1235" text-anchor="middle" class="phase-title">Phase 4: Model Training &amp; Evaluation</text>
+    <path class="arrow-line" d="M 600 1200 V 1260" marker-end="url(#arrowhead)"/>
+    
+    <rect x="450" y="1260" width="300" height="70" class="box info-box"/>
+    <use href="#icon-model" x="460" y="1273" width="45" height="45"/>
+    <text x="600" y="1290" text-anchor="middle" class="title-text">Train Classifier</text>
+    <text x="600" y="1310" text-anchor="middle" class="body-text">e.g., RandomForest, SVM</text>
+    <path class="arrow-line" d="M 600 1330 V 1350" marker-end="url(#arrowhead)"/>
+
+    <rect x="450" y="1350" width="300" height="50" class="box output-box"/>
+    <text x="600" y="1378" text-anchor="middle" class="title-text">Trained Vulnerability Classifier</text>
+</svg>

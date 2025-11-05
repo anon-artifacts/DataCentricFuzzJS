@@ -1,0 +1,31 @@
+function splice_args() {
+    args = arguments;
+    const v6 = [0,5];
+    return Array.prototype.splice.apply(args, v6);
+}
+var args;
+var O = [0,1,2,3,4,5,6,7,8,9];
+var A = splice_args.apply(undefined, O);
+args[0];
+args[1];
+args[2];
+args[3];
+args[4];
+args.length;
+A[0];
+A[1];
+A[2];
+A[3];
+A[4];
+A.length;
+O[0];
+O[1];
+O[2];
+O[3];
+O[4];
+O[5];
+O[6];
+O[7];
+O[8];
+O[9];
+O.length;

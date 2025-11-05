@@ -1,0 +1,10 @@
+var arr = [0,1];
+var it = arr[Symbol.iterator]();
+var ki = arr.keys();
+var ei = arr.entries();
+[0,0];
+[1,1];
+arr[2] = 2;
+arr.length = 4;
+[2,2];
+[3,,];

@@ -1,0 +1,13 @@
+-0;
+parseInt("-0");
+parseInt("+0");
+parseInt("- 0");
+parseInt("+ 0");
+parseInt("-	0");
+parseInt("+	0");
+-0;
+parseInt(" -0");
+parseInt(" +0");
+-0;
+parseInt("	-0");
+parseInt("	+0");

@@ -1,0 +1,50 @@
+function compare(a1, a2, a3) {
+    if (a1 == a2) {
+        print("Passed");
+    } else {
+        if (a3 && (a1 == a3)) {
+            print("Passed");
+        } else {
+            print("Failed - " + a1);
+        }
+    }
+}
+var sample = (1000.234).toLocaleString();
+var decimal = ".";
+var thousands = ",";
+if (sample == "1.000,234") {
+    decimal = ",";
+    thousands = ".";
+} else {
+    if (sample == "1000.234") {
+        if (Number(1234567).toLocaleString() == "1234567") {
+            thousands = "";
+        }
+    } else {
+        if (sample == "1000,234") {
+            decimal = ",";
+            thousands = "";
+        }
+    }
+}
+print("|| 999.9996 -> 1,000 or 1.000");
+compare((999.9996).toLocaleString(), ("1" + thousands) + "000");
+print("|| -999.9996 -> -1,000 or -1.000");
+compare((-999.9996).toLocaleString(), ("-1" + thousands) + "000");
+print("|| -1999.9996 -> -2,000 or -2.000");
+compare((-1999.9996).toLocaleString(), ("-2" + thousands) + "000");
+print("|| 0.9996 -> 1 or 1.00 or 1,00");
+compare((0.9996).toLocaleString(), "1", ("1" + decimal) + "00");
+print("|| 0.1996 -> 0.2");
+compare((0.1996).toLocaleString(), ("0" + decimal) + "2");
+print("|| -0.1996 -> -0.2");
+compare((-0.1996).toLocaleString(), ("-0" + decimal) + "2");
+print("|| -0.1996 -> -0.2");
+compare((-0.1996).toLocaleString(), ("-0" + decimal) + "2");
+print("|| 1/3 -> 0.333 or 0,333");
+compare((1 / 3).toLocaleString(), ("0" + decimal) + "333");
+print("|| 1234567890.123456 ->1,234,567,890.123 or 1.234.567.890,123");
+compare((1234567890.12345).toLocaleString(), ((((((("1" + thousands) + "234") + thousands) + "567") + thousands) + "890") + decimal) + "123");
+print("|| 10 -> 10 or 10.00 or 10,00");
+compare(Number(10).toLocaleString(), ("10" + decimal) + "00", "10");
+print("");

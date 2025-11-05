@@ -1,0 +1,14 @@
+const v1 = new Map();
+var m = v1;
+m.set(NaN, "ok");
+m.has(NaN);
+m.get(NaN);
+m.delete(NaN);
+m.has(NaN);
+m.get(NaN);
+const v17 = new Set();
+var s = v17;
+s.add(NaN);
+s.has(NaN);
+s.delete(NaN);
+s.has(NaN);

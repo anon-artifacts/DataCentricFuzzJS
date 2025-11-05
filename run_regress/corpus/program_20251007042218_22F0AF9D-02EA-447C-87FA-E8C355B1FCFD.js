@@ -1,0 +1,82 @@
+var obj1 = {};
+Object.isExtensible(obj1);
+Object.preventExtensions(obj1);
+Object.isExtensible(obj1);
+obj1.x = 42;
+obj1.x;
+obj1[1] = 42;
+obj1[1];
+var obj2 = {};
+Object.isExtensible(obj2);
+obj2.x = 42;
+obj2.x;
+Object.isExtensible(obj2);
+Object.preventExtensions(obj2);
+obj2.x;
+obj2.y = 42;
+obj2.y;
+obj2.x = 43;
+obj2.x;
+function f28() {
+    return 42;
+}
+const v30 = new f28();
+obj2.y = v30;
+obj2.y;
+obj2.x;
+try {
+    Object.defineProperty(obj2, "y", { value: 42 });
+} catch(e39) {
+    /object is not extensible/.test(e39);
+}
+obj2.y;
+obj2.x;
+obj2[1] = 42;
+obj2[1];
+const v50 = new Array();
+var arr = v50;
+arr[1] = 10;
+Object.preventExtensions(arr);
+arr[2] = 42;
+arr[1];
+arr[1] = 42;
+arr[1];
+var parent = {};
+parent.x = 42;
+Object.preventExtensions(parent);
+var child = Object.create(parent);
+child.y = 42;
+parent.y = 29;
+function foo() {
+    return 42;
+}
+Object.preventExtensions(foo);
+foo.x = 29;
+foo.x;
+var o = Object.preventExtensions({});
+o.v = 50;
+var v = 50;
+o.v;
+o[0] = 100;
+var n = 100;
+o[0];
+obj = { x: 42, y: "foo" };
+Object.preventExtensions(obj);
+Object.isExtensible(obj);
+Object.isSealed(obj);
+obj = { prop1: 1, prop2: 2 };
+obj2 = { prop1: 3, prop2: 4 };
+Object.preventExtensions(obj);
+Object.preventExtensions(obj2);
+Object.isExtensible(obj);
+Object.isExtensible(obj2);
+Object.isSealed(obj);
+Object.isSealed(obj2);
+obj = { prop1: 1, prop2: 2, 75: "foo" };
+obj2 = { prop1: 3, prop2: 4, 150: "bar" };
+Object.preventExtensions(obj);
+Object.preventExtensions(obj2);
+Object.isExtensible(obj);
+Object.isExtensible(obj2);
+Object.isSealed(obj);
+Object.isSealed(obj2);

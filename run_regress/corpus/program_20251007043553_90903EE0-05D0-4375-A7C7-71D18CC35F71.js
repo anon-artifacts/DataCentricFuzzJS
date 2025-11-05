@@ -1,0 +1,36 @@
+console.log("This tests Symbols work in ES6 Map.");
+var symbol = Symbol("Cocoa");
+var symbol2 = Symbol("Matcha");
+const v11 = new Map();
+var map = v11;
+map.set(symbol, "Cappuccino");
+map.size;
+map.get(symbol);
+map.has(Symbol("Cocoa"));
+map.get(Symbol("Cocoa"));
+map.has("Cocoa");
+map.get("Cocoa");
+map.has(symbol2);
+map.get(symbol2);
+map.set(symbol2, "Kilimanjaro");
+map.size;
+map.get(symbol);
+map.get(symbol2);
+map.has(Symbol("Matcha"));
+map.get(Symbol("Matcha"));
+map.has("Matcha");
+map.get("Matcha");
+map.delete(symbol2);
+map.has(symbol2);
+map.get(symbol2);
+map.has(symbol);
+map.get(symbol);
+map.size;
+var key;
+var value;
+function f54(a55, a56) {
+    key = a56;
+    value = a55;
+}
+map.forEach(f54);
+successfullyParsed = true;

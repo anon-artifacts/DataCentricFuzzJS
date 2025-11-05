@@ -1,0 +1,92 @@
+var x = [1,2,2,4,5,+0,-0,NaN,0,true,true,false];
+for (i = -3; i < 15; i++) {
+    print(x.indexOf(i));
+    for (j = -3; j < 15; j++) {
+        print(x.indexOf(x[i], j));
+        print(x.indexOf(i, j));
+    }
+}
+function f42() {
+}
+var b = f42;
+b.prototype = Array.prototype;
+const v46 = new b();
+var y = v46;
+const v49 = new Object();
+var z = v49;
+const v51 = new Object();
+var a = v51;
+y[0] = "abc";
+y[1] = "def";
+y[2] = "efg";
+y[3] = true;
+y[4] = true;
+y[5] = false;
+y[6] = a;
+y[7] = a;
+y[8] = null;
+y.length = 10;
+print(y.indexOf("abc"));
+print(y.indexOf("abc", 3));
+print(y.indexOf("abc", 2));
+print(y.indexOf("abc", -2));
+print(y.indexOf("efg"));
+print(y.indexOf("efg", 6));
+print(y.indexOf("efg", 1));
+print(y.indexOf("efg", -3));
+print(y.indexOf("xyg"));
+print(y.indexOf("esg", 2));
+print(y.indexOf("eag", 2));
+print(y.indexOf("", -2));
+print(y.indexOf(true));
+print(y.indexOf(false));
+const v118 = new Boolean(true);
+print(y.indexOf(v118));
+print(y.indexOf(a, 6));
+print(y.indexOf(a, 1));
+print(y.indexOf(a));
+print(y.indexOf(b));
+print(y.indexOf(null));
+print(y.indexOf());
+var a;
+var arr = [10];
+const v141 = Array.prototype;
+function f144() {
+    a = true;
+    return 30;
+}
+Object.defineProperty(v141, "4", { configurable: true, get: f144 });
+a = false;
+arr.length = 6;
+var f = arr.indexOf(30);
+print(a);
+const v157 = new Array(5.5, 5.6);
+var floatArray = v157;
+floatArray[6] = 5.6;
+print(floatArray.indexOf(5.7));
+var gap = [0,1];
+print(gap.indexOf(4));
+const t67 = Array.prototype;
+t67[2] = "foo";
+print(gap.indexOf("foo"));
+gap[5] = 4;
+print(gap.indexOf("foo"));
+print(gap.indexOf(4));
+gap = [0,1.1];
+print(gap.indexOf(4));
+const t75 = Array.prototype;
+t75[2] = "bar";
+print(gap.indexOf("bar"));
+gap[5] = 4;
+print(gap.indexOf(4));
+print(gap.indexOf("bar"));
+gap = [0,"test"];
+print(gap.indexOf(4));
+const t83 = Array.prototype;
+t83[2] = 4;
+print(gap.indexOf(4));
+gap[5] = 4;
+print(gap.indexOf(4));
+const t88 = Array.prototype;
+delete t88[2];
+print(gap.indexOf(4));

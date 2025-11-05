@@ -1,0 +1,77 @@
+console.log("Tests that GetLocals on captured variables aren't eliminated too aggressively.");
+function foo() {
+    var x;
+    function f6() {
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+        x = 42;
+    }
+    f6();
+    var y = x;
+    return y;
+}
+for (let i74 = 0; i74 < 200; i74++) {
+    foo();
+}
+foo();

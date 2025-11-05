@@ -1,0 +1,10 @@
+const t0 = Error.prototype;
+t0.name = 0;
+Error().toString();
+Error("1").toString();
+Error(0).toString();
+const t2 = Error.prototype;
+t2.name = "";
+Error().toString();
+Error("1").toString();
+Error(0).toString();

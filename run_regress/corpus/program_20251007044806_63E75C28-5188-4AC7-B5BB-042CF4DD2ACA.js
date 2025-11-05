@@ -1,0 +1,127 @@
+console.log("Test prototypes of various objects and the various means to access them.");
+("").__proto__;
+(0.1).__proto__;
+true.__proto__;
+Symbol().__proto__;
+([]).__proto__;
+({}).__proto__;
+const v17 = new Date();
+v17.__proto__;
+const v20 = new Error();
+v20.__proto__;
+const v23 = new Number();
+v23.__proto__;
+const v26 = new Object();
+v26.__proto__;
+const v29 = new String();
+v29.__proto__;
+Array.prototype.__proto__;
+Date.prototype.__proto__;
+Number.prototype.__proto__;
+Object.prototype.__proto__;
+String.prototype.__proto__;
+Array.__proto__;
+Date.__proto__;
+Number.__proto__;
+String.__proto__;
+Object.getPrototypeOf("");
+Object.getPrototypeOf(0);
+Object.getPrototypeOf(true);
+Object.getPrototypeOf(Symbol());
+Object.getPrototypeOf([]);
+Object.getPrototypeOf({});
+const v58 = new Date();
+Object.getPrototypeOf(v58);
+const v60 = new Error();
+Object.getPrototypeOf(v60);
+const v62 = new Number();
+Object.getPrototypeOf(v62);
+const v64 = new Object();
+Object.getPrototypeOf(v64);
+const v66 = new String();
+Object.getPrototypeOf(v66);
+Object.getPrototypeOf(Array.prototype);
+Object.getPrototypeOf(Date.prototype);
+Object.getPrototypeOf(Number.prototype);
+Object.getPrototypeOf(Object.prototype);
+Object.getPrototypeOf(String.prototype);
+Object.getPrototypeOf(Array);
+Object.getPrototypeOf(Date);
+Object.getPrototypeOf(Number);
+Object.getPrototypeOf(String);
+String.prototype.isPrototypeOf("");
+Number.prototype.isPrototypeOf(0);
+Boolean.prototype.isPrototypeOf(true);
+const v92 = Symbol();
+Symbol.prototype.isPrototypeOf(v92);
+const v95 = [];
+Array.prototype.isPrototypeOf(v95);
+const v98 = {};
+Object.prototype.isPrototypeOf(v98);
+const v101 = new Date();
+Date.prototype.isPrototypeOf(v101);
+const v104 = new Error();
+Error.prototype.isPrototypeOf(v104);
+const v107 = new Number();
+Number.prototype.isPrototypeOf(v107);
+const v110 = new Object();
+Object.prototype.isPrototypeOf(v110);
+const v113 = new String();
+String.prototype.isPrototypeOf(v113);
+const v116 = Array.prototype;
+Object.prototype.isPrototypeOf(v116);
+const v119 = Date.prototype;
+Object.prototype.isPrototypeOf(v119);
+const v122 = Number.prototype;
+Object.prototype.isPrototypeOf(v122);
+const v125 = String.prototype;
+Object.prototype.isPrototypeOf(v125);
+Object.__proto__.isPrototypeOf(Array);
+Object.__proto__.isPrototypeOf(Date);
+Object.__proto__.isPrototypeOf(Number);
+Object.__proto__.isPrototypeOf(String);
+var wasSet = false;
+var o = {};
+function f141() {
+    wasSet = true;
+}
+o.__defineGetter__("__proto__", f141);
+o.__proto__;
+var wasSet = false;
+var o = {};
+function f150() {
+    wasSet = true;
+}
+o.__defineSetter__("__proto__", f150);
+o.__proto__ = {};
+var wasSet = false;
+var o = {};
+function f159() {
+    wasSet = true;
+}
+Object.defineProperty(o, "__proto__", { get: f159 });
+o.__proto__;
+var wasSet = false;
+var o = {};
+function f169(a170) {
+    wasSet = true;
+}
+Object.defineProperty(o, "__proto__", { __proto__: f169 });
+o.__proto__ = {};
+var o = {};
+o.__proto__ = { x: true };
+o.x;
+var o = {};
+o.__proto__ = { x: true };
+o.hasOwnProperty("__proto__");
+const t115 = Object.prototype;
+delete t115.__proto__;
+try {
+    var o = {};
+    o.__proto__ = { x: true };
+    o.x;
+} catch(e193) {
+}
+var o = {};
+o.__proto__ = { x: true };
+o.hasOwnProperty("__proto__");

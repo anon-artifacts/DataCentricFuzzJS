@@ -1,0 +1,72 @@
+var gTestfile = "arguments-property-attributes.js";
+var BUGNUMBER = 516255;
+var summary = "Attributes for properties of arguments objects";
+print((BUGNUMBER + ": ") + summary);
+function args() {
+    return arguments;
+}
+var a = args(0, 1);
+var argProps = Object.getOwnPropertyNames(a).sort();
+argProps.indexOf("callee") >= 0;
+argProps.indexOf("0") >= 0;
+argProps.indexOf("1") >= 0;
+argProps.indexOf("length") >= 0;
+var calleeDesc = Object.getOwnPropertyDescriptor(a, "callee");
+calleeDesc.value;
+args();
+calleeDesc.writable;
+calleeDesc.enumerable;
+calleeDesc.configurable;
+var zeroDesc = Object.getOwnPropertyDescriptor(a, "0");
+zeroDesc.value;
+zeroDesc.writable;
+zeroDesc.enumerable;
+zeroDesc.configurable;
+var oneDesc = Object.getOwnPropertyDescriptor(a, "1");
+oneDesc.value;
+oneDesc.writable;
+oneDesc.enumerable;
+oneDesc.configurable;
+var lengthDesc = Object.getOwnPropertyDescriptor(a, "length");
+lengthDesc.value;
+lengthDesc.writable;
+lengthDesc.enumerable;
+lengthDesc.configurable;
+function strictArgs() {
+    'use strict';
+    return arguments;
+}
+var sa = strictArgs(0, 1);
+var strictArgProps = Object.getOwnPropertyNames(sa).sort();
+strictArgProps.indexOf("callee") >= 0;
+strictArgProps.indexOf("caller") >= 0;
+strictArgProps.indexOf("0") >= 0;
+strictArgProps.indexOf("1") >= 0;
+strictArgProps.indexOf("length") >= 0;
+var strictCalleeDesc = Object.getOwnPropertyDescriptor(sa, "callee");
+typeof strictCalleeDesc.get;
+typeof strictCalleeDesc.set;
+strictCalleeDesc.get;
+strictCalleeDesc.set;
+strictCalleeDesc.enumerable;
+strictCalleeDesc.configurable;
+var strictCallerDesc = Object.getOwnPropertyDescriptor(sa, "caller");
+var strictZeroDesc = Object.getOwnPropertyDescriptor(sa, "0");
+strictZeroDesc.value;
+strictZeroDesc.writable;
+strictZeroDesc.enumerable;
+strictZeroDesc.configurable;
+var strictOneDesc = Object.getOwnPropertyDescriptor(sa, "1");
+strictOneDesc.value;
+strictOneDesc.writable;
+strictOneDesc.enumerable;
+strictOneDesc.configurable;
+var strictLengthDesc = Object.getOwnPropertyDescriptor(sa, "length");
+strictLengthDesc.value;
+strictLengthDesc.writable;
+strictLengthDesc.enumerable;
+strictLengthDesc.configurable;
+if (typeof reportCompare === "function") {
+    reportCompare(true, true);
+}
+print("All tests passed!");

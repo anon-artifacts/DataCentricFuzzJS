@@ -1,0 +1,13 @@
+var arr = [1,2,3];
+const v8 = [1,2,3];
+const v9 = { arr: v8 };
+const v10 = [...arr];
+const v11 = { arr: v10 };
+[[1,2,3]];
+[[...arr]];
+const v25 = [6,5,[1,2,3]];
+const v26 = { arr: v25 };
+const v30 = [6,5,[...arr]];
+const v31 = { arr: v30 };
+[8,7,[6,5,[1,2,3]]];
+[8,7,[6,5,[...arr]]];

@@ -1,0 +1,12 @@
+const v1 = new Date();
+var date = v1;
+var year = date.getYear();
+date.setMilliseconds(Number.NaN);
+date.setYear(1900 + year);
+date.getYear();
+date.getMonth();
+date.getDate();
+date.getHours();
+date.getMinutes();
+date.getSeconds();
+date.getMilliseconds();

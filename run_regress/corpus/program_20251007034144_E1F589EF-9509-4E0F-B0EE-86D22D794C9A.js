@@ -1,0 +1,1 @@
+`\n{\n    function a() {}\n}\n\n{\n    // Duplicate lexical declarations are only allowed if they are both sloppy\n    // block functions (see bug 4693). In this case the sloppy block function\n    // conflicts with the lexical variable declaration, causing a syntax error.\n    let a;\n    function a() {};\n}\n`;

@@ -1,0 +1,11 @@
+var aproto = Object.getPrototypeOf(Array()[Symbol.iterator]());
+const v9 = new Map();
+var mproto = Object.getPrototypeOf(v9[Symbol.iterator]());
+const v15 = new Set();
+var sproto = Object.getPrototypeOf(v15[Symbol.iterator]());
+aproto !== mproto;
+aproto !== sproto;
+mproto !== sproto;
+aproto.next !== mproto.next;
+aproto.next !== sproto.next;
+mproto.next !== sproto.next;

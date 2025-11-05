@@ -1,0 +1,138 @@
+function f0() {
+    let v2 = "f";
+    const v35 = {
+        set b(a5) {
+            let v4 = this;
+            const t1 = "undefined";
+            t1.h = a5;
+            v2 = (v4 = a5);
+            super[v4];
+            new BigInt64Array(165);
+            var a = [];
+            var f1;
+            function bar(a17, a18, a19) {
+                f1("push", a, [a17], a18 + 0);
+            }
+            function foo() {
+                return bar(arguments[0], arguments[1]);
+            }
+            new BigUint64Array(62);
+            new Float32Array(1024);
+        },
+    };
+    return v35;
+}
+const v36 = f0();
+const v37 = f0();
+const v38 = f0();
+class C39 extends f0 {
+    static h = v37;
+    static get g() {
+        let v41 = WebAssembly.JSTag;
+        let v42 = new WebAssembly.Tag({parameters: ["f32", "i32"]});
+        // WasmModule Code:
+        // BeginWasmModule
+        //     v43 <- WasmDefineTag [Fuzzilli.Parameter.plain(.wasmf32), Fuzzilli.Parameter.plain(.wasmi64), Fuzzilli.Parameter.plain(.wasmf32), Fuzzilli.Parameter.plain(.wasmf32), Fuzzilli.Parameter.plain(.wasmi32), Fuzzilli.Parameter.plain(.wasmi64), Fuzzilli.Parameter.plain(.wasmi32), Fuzzilli.Parameter.plain(.wasmf64), Fuzzilli.Parameter.plain(.wasmf64)]
+        //     v44 <- WasmDefineTag [Fuzzilli.Parameter.plain(.wasmi32), Fuzzilli.Parameter.plain(.wasmf64), Fuzzilli.Parameter.plain(.wasmi32), Fuzzilli.Parameter.plain(.wasmi64), Fuzzilli.Parameter.plain(.wasmf32), Fuzzilli.Parameter.plain(.wasmi64), Fuzzilli.Parameter.plain(.wasmi32), Fuzzilli.Parameter.plain(.wasmi32), Fuzzilli.Parameter.plain(.wasmi32)]
+        //     v45 <- WasmDefineMemory [9,48031],
+        //     BeginWasmFunction ([.wasmf64, .wasmf32, .wasmi32, .wasmf32, .wasmf32, .wasmi32, .wasmf32, .wasmi32, .wasmf32] => .nothing) -> [v46, v47, v48, v49, v50, v51, v52, v53, v54]
+        //         v55 <- Consti32 '3'
+        //         v56 <- Consti32 '268435456'
+        //         v57 <- Consti32 '3'
+        //         v58 <- Consti64 '268435441'
+        //         v59 <- Consti64 '129'
+        //         v60 <- Consti64 '-916085043'
+        //         v61 <- Constf64 '1000.0'
+        //         v62 <- Constf32 '824.129'
+        //         v63 <- Consti32 '973387446'
+        //         v64 <- Constf32 '3.489867'
+        //         v65 <- Constf32 '-inf'
+        //         v66 <- Constf32 '-inf'
+        //         WasmBeginTry ([] => .nothing) [] -> L:v67 []
+        //             v68 <- Wasmf64BinOp v46 Copysign v46
+        //         WasmBeginCatch v41 [] -> L:v69 E:v70 [v71]
+        //             v72 <- Consti32 '2'
+        //             v73 <- Consti32 '2'
+        //             v74 <- Consti32 '-1'
+        //         WasmBeginCatch v44 [] -> L:v75 E:v76 [v77, v78, v79, v80, v81, v82, v83, v84, v85]
+        //             WasmReturn
+        //         WasmEndTry []
+        //     v86 <- EndWasmFunction
+        // v87 <- EndWasmModule
+        // 
+        const v87 = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array([
+            0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00, 0x01, 0x2C,
+            0x05, 0x60, 0x00, 0x00, 0x60, 0x01, 0x6F, 0x00, 0x60, 0x09,
+            0x7D, 0x7E, 0x7D, 0x7D, 0x7F, 0x7E, 0x7F, 0x7C, 0x7C, 0x00,
+            0x60, 0x09, 0x7F, 0x7C, 0x7F, 0x7E, 0x7D, 0x7E, 0x7F, 0x7F,
+            0x7F, 0x00, 0x60, 0x09, 0x7C, 0x7D, 0x7F, 0x7D, 0x7D, 0x7F,
+            0x7D, 0x7F, 0x7D, 0x00, 0x02, 0x19, 0x01, 0x07, 0x69, 0x6D,
+            0x70, 0x6F, 0x72, 0x74, 0x73, 0x0C, 0x69, 0x6D, 0x70, 0x6F,
+            0x72, 0x74, 0x5F, 0x30, 0x5F, 0x76, 0x34, 0x31, 0x04, 0x00,
+            0x01, 0x03, 0x02, 0x01, 0x04, 0x04, 0x01, 0x00, 0x05, 0x06,
+            0x01, 0x01, 0x09, 0x9F, 0xF7, 0x02, 0x0D, 0x05, 0x02, 0x00,
+            0x02, 0x00, 0x03, 0x06, 0x01, 0x00, 0x07, 0x06, 0x01, 0x02,
+            0x77, 0x30, 0x00, 0x00, 0x09, 0x01, 0x00, 0x0A, 0xBC, 0x01,
+            0x01, 0xB9, 0x01, 0x1A, 0x01, 0x7F, 0x01, 0x7F, 0x01, 0x7F,
+            0x01, 0x7E, 0x01, 0x7E, 0x01, 0x7E, 0x01, 0x7C, 0x01, 0x7D,
+            0x01, 0x7F, 0x01, 0x7D, 0x01, 0x7D, 0x01, 0x7D, 0x01, 0x7C,
+            0x01, 0x6F, 0x01, 0x7F, 0x01, 0x7F, 0x01, 0x7F, 0x01, 0x7F,
+            0x01, 0x7F, 0x01, 0x7F, 0x01, 0x7E, 0x01, 0x7D, 0x01, 0x7E,
+            0x01, 0x7F, 0x01, 0x7C, 0x01, 0x7F, 0x41, 0x03, 0x21, 0x09,
+            0x41, 0x80, 0x80, 0x80, 0x80, 0x01, 0x21, 0x0A, 0x41, 0x03,
+            0x21, 0x0B, 0x42, 0xF1, 0xFF, 0xFF, 0xFF, 0x00, 0x21, 0x0C,
+            0x42, 0x81, 0x01, 0x21, 0x0D, 0x42, 0xCD, 0xCD, 0x96, 0xCB,
+            0x7C, 0x21, 0x0E, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40,
+            0x8F, 0x40, 0x21, 0x0F, 0x43, 0x42, 0x08, 0x4E, 0x44, 0x21,
+            0x10, 0x41, 0xB6, 0xED, 0x92, 0xD0, 0x03, 0x21, 0x11, 0x43,
+            0xFB, 0x59, 0x5F, 0x40, 0x21, 0x12, 0x43, 0x00, 0x00, 0x80,
+            0xFF, 0x21, 0x13, 0x43, 0x00, 0x00, 0x80, 0xFF, 0x21, 0x14,
+            0x06, 0x00, 0x20, 0x00, 0x20, 0x00, 0xA6, 0x21, 0x15, 0x07,
+            0x00, 0x21, 0x16, 0x41, 0x02, 0x21, 0x17, 0x41, 0x02, 0x21,
+            0x18, 0x41, 0x7F, 0x21, 0x19, 0x07, 0x02, 0x21, 0x1A, 0x21,
+            0x1B, 0x21, 0x1C, 0x21, 0x1D, 0x21, 0x1E, 0x21, 0x1F, 0x21,
+            0x20, 0x21, 0x21, 0x21, 0x22, 0x0F, 0x0B, 0x0B,
+        ])),
+        { imports: {
+            import_0_v41: v41,
+        } });
+        const v88 = v87.exports;
+        v88.w0(v88, v38, v38, v87, v87, f0, v88, v88, v88);
+        return v36;
+    }
+}
+new C39();
+new C39();
+new C39();
+function f96() {
+    return C39;
+}
+function f101(a102) {
+}
+Array.prototype.__defineSetter__(0, f101);
+gc();
+function f109() {
+}
+var o = { y: f109 };
+const v112 = [o,o,o,o,o,o,o,o,o];
+var a = v112;
+try {
+    for (let i115 = 0; i115 < 9; i115++) {
+        a[i115].y();
+    }
+} catch(e123) {
+    e123.name;
+}
+if (this.Intl) {
+    const v128 = Intl.DateTimeFormat;
+    const v131 = { timeZone: "Asia/Katmandu" };
+    const stacks = v112;
+    let v134;
+    try { v134 = saveStack(); } catch (e) {}
+    try { stacks.push(v134); } catch (e) {}
+    try { stacks.pop(); } catch (e) {}
+    for (const v137 of stacks) {
+    }
+    const v138 = new v128("en-US", v131);
+    var o = v138;
+}

@@ -1,0 +1,97 @@
+poc_filename,v8_version_tested,issue_report_date,flags_used,crashed,log_file
+poc_40061653.js,9.8.123,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-9.8.123.log
+poc_40061653.js,9.9.47,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-9.9.47.log
+poc_40061653.js,10.0.53,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.0.53.log
+poc_40061653.js,10.1.42,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.1.42.log
+poc_40061653.js,10.2.51,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.2.51.log
+poc_40061653.js,10.3.91,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.3.91.log
+poc_40061653.js,10.4.101,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.4.101.log
+poc_40061653.js,10.5.111,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.5.111.log
+poc_40061653.js,10.6.68,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.6.68.log
+poc_40061653.js,10.7.81,2022-11-08,--allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40061653.js-10.7.81.log
+poc_40061653.js,10.8.92,2022-11-08,--allow-natives-syntax --expose-gc,TRUE,reproduce_logs/poc_40061653.js-10.8.92.log
+poc_40061653.js,10.9.129,2022-11-08,--allow-natives-syntax --expose-gc,TRUE,reproduce_logs/poc_40061653.js-10.9.129.log
+poc_40061748.js,9.8.123,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,FALSE,reproduce_logs/poc_40061748.js-9.8.123.log
+poc_40061748.js,9.9.47,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,FALSE,reproduce_logs/poc_40061748.js-9.9.47.log
+poc_40061748.js,10.0.53,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,FALSE,reproduce_logs/poc_40061748.js-10.0.53.log
+poc_40061748.js,10.1.42,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.1.42.log
+poc_40061748.js,10.2.51,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.2.51.log
+poc_40061748.js,10.3.91,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.3.91.log
+poc_40061748.js,10.4.101,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.4.101.log
+poc_40061748.js,10.5.111,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.5.111.log
+poc_40061748.js,10.6.68,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.6.68.log
+poc_40061748.js,10.7.81,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.7.81.log
+poc_40061748.js,10.8.92,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.8.92.log
+poc_40061748.js,10.9.129,2022-11-15,--harmony-rab-gsab --allow-natives-syntax,TRUE,reproduce_logs/poc_40061748.js-10.9.129.log
+poc_40062058.js,9.9.47,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-9.9.47.log
+poc_40062058.js,10.0.53,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.0.53.log
+poc_40062058.js,10.1.42,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.1.42.log
+poc_40062058.js,10.2.51,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.2.51.log
+poc_40062058.js,10.3.91,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.3.91.log
+poc_40062058.js,10.4.101,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.4.101.log
+poc_40062058.js,10.5.111,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.5.111.log
+poc_40062058.js,10.6.68,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.6.68.log
+poc_40062058.js,10.7.81,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.7.81.log
+poc_40062058.js,10.8.92,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.8.92.log
+poc_40062058.js,10.9.129,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-10.9.129.log
+poc_40062058.js,11.0.140,2022-12-06,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062058.js-11.0.140.log
+poc_40062164.js,9.9.47,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-9.9.47.log
+poc_40062164.js,10.0.53,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.0.53.log
+poc_40062164.js,10.1.42,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.1.42.log
+poc_40062164.js,10.2.51,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.2.51.log
+poc_40062164.js,10.3.91,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.3.91.log
+poc_40062164.js,10.4.101,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.4.101.log
+poc_40062164.js,10.5.111,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.5.111.log
+poc_40062164.js,10.6.68,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.6.68.log
+poc_40062164.js,10.7.81,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.7.81.log
+poc_40062164.js,10.8.92,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.8.92.log
+poc_40062164.js,10.9.129,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-10.9.129.log
+poc_40062164.js,11.0.140,2022-12-10,--harmony --harmony-struct --trace-gc --trace-opt --trace-deopt,FALSE,reproduce_logs/poc_40062164.js-11.0.140.log
+poc_40062345.js,9.9.47,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-9.9.47.log
+poc_40062345.js,10.0.53,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.0.53.log
+poc_40062345.js,10.1.42,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.1.42.log
+poc_40062345.js,10.2.51,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.2.51.log
+poc_40062345.js,10.3.91,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.3.91.log
+poc_40062345.js,10.4.101,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.4.101.log
+poc_40062345.js,10.5.111,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.5.111.log
+poc_40062345.js,10.6.68,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.6.68.log
+poc_40062345.js,10.7.81,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.7.81.log
+poc_40062345.js,10.8.92,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.8.92.log
+poc_40062345.js,10.9.129,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-10.9.129.log
+poc_40062345.js,11.0.140,2022-12-22,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing,FALSE,reproduce_logs/poc_40062345.js-11.0.140.log
+poc_40062384.js,9.9.47,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-9.9.47.log
+poc_40062384.js,10.0.53,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.0.53.log
+poc_40062384.js,10.1.42,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.1.42.log
+poc_40062384.js,10.2.51,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.2.51.log
+poc_40062384.js,10.3.91,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.3.91.log
+poc_40062384.js,10.4.101,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.4.101.log
+poc_40062384.js,10.5.111,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.5.111.log
+poc_40062384.js,10.6.68,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.6.68.log
+poc_40062384.js,10.7.81,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.7.81.log
+poc_40062384.js,10.8.92,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.8.92.log
+poc_40062384.js,10.9.129,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-10.9.129.log
+poc_40062384.js,11.0.140,2022-12-25,--future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --trace-turbo,FALSE,reproduce_logs/poc_40062384.js-11.0.140.log
+poc_40062717.js,10.0.53,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.0.53.log
+poc_40062717.js,10.1.42,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.1.42.log
+poc_40062717.js,10.2.51,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.2.51.log
+poc_40062717.js,10.3.91,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.3.91.log
+poc_40062717.js,10.4.101,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.4.101.log
+poc_40062717.js,10.5.111,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.5.111.log
+poc_40062717.js,10.6.68,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.6.68.log
+poc_40062717.js,10.7.81,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.7.81.log
+poc_40062717.js,10.8.92,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.8.92.log
+poc_40062717.js,10.9.129,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-10.9.129.log
+poc_40062717.js,11.0.140,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-11.0.140.log
+poc_40062717.js,11.1.92,2023-01-18,--assert-types --turboshaft,FALSE,reproduce_logs/poc_40062717.js-11.1.92.log
+poc_40063140.js,10.1.42,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.1.42.log
+poc_40063140.js,10.2.51,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.2.51.log
+poc_40063140.js,10.3.91,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.3.91.log
+poc_40063140.js,10.4.101,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.4.101.log
+poc_40063140.js,10.5.111,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.5.111.log
+poc_40063140.js,10.6.68,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.6.68.log
+poc_40063140.js,10.7.81,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.7.81.log
+poc_40063140.js,10.8.92,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.8.92.log
+poc_40063140.js,10.9.129,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-10.9.129.log
+poc_40063140.js,11.0.140,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-11.0.140.log
+poc_40063140.js,11.1.92,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-11.1.92.log
+poc_40063140.js,11.2.31,2023-02-18,--maglev --allow-natives-syntax --expose-gc,FALSE,reproduce_logs/poc_40063140.js-11.2.31.log

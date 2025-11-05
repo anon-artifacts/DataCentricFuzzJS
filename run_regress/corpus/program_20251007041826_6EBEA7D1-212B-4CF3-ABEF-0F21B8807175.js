@@ -1,0 +1,178 @@
+var intArrayConstructors = [Uint8Array,Int8Array,Uint16Array,Int16Array,Uint32Array,Int32Array,Uint8ClampedArray];
+var floatArrayConstructors = [Float32Array,Float64Array];
+var typedArrayConstructors = [...intArrayConstructors,...floatArrayConstructors];
+for (const v15 of typedArrayConstructors) {
+    v15.prototype.fill.length;
+    [];
+    const v23 = new v15([]);
+    v23.fill(8);
+    [8,8,8,8,8];
+    const v38 = new v15([0,0,0,0,0]);
+    v38.fill(8);
+    [0,8,8,8,8];
+    const v54 = new v15([0,0,0,0,0]);
+    v54.fill(8, 1);
+    [0,0,0,0,0];
+    const v70 = new v15([0,0,0,0,0]);
+    v70.fill(8, 10);
+    [8,8,8,8,8];
+    const v80 = -5;
+    const v87 = new v15([0,0,0,0,0]);
+    v87.fill(8, v80);
+    [0,8,8,8,0];
+    const v104 = new v15([0,0,0,0,0]);
+    v104.fill(8, 1, 4);
+    [0,8,8,8,0];
+    const v115 = -1;
+    const v122 = new v15([0,0,0,0,0]);
+    v122.fill(8, 1, v115);
+    [0,8,8,8,8];
+    const v139 = new v15([0,0,0,0,0]);
+    v139.fill(8, 1, 42);
+    [0,0,8,8,8];
+    const v149 = -3;
+    const v157 = new v15([0,0,0,0,0]);
+    v157.fill(8, v149, 42);
+    [0,0,8,8,0];
+    const v167 = -3;
+    const v175 = new v15([0,0,0,0,0]);
+    v175.fill(8, v167, 4);
+    [0,0,0,8,0];
+    const v185 = -2;
+    const v187 = -1;
+    const v194 = new v15([0,0,0,0,0]);
+    v194.fill(8, v185, v187);
+    [0,0,0,0,0];
+    const v204 = -1;
+    const v206 = -3;
+    const v213 = new v15([0,0,0,0,0]);
+    v213.fill(8, v204, v206);
+    [8,8,8,8,0];
+    const v230 = new v15([0,0,0,0,0]);
+    v230.fill(8, 0, 4);
+    [0,0,0,0,0];
+    const v246 = new v15([0,0,0,0,0]);
+    v246.fill(8, Infinity);
+    [8,8,8,8,8];
+    const v255 = -Infinity;
+    const v262 = new v15([0,0,0,0,0]);
+    v262.fill(8, v255);
+    [8,8,8,8,8];
+    const v278 = new v15([0,0,0,0,0]);
+    v278.fill(8, 0, Infinity);
+    [0,0,0,0,0];
+    const v288 = -Infinity;
+    const v295 = new v15([0,0,0,0,0]);
+    v295.fill(8, 0, v288);
+    [0,0,0,0,0];
+    const v314 = new v15([0,0,0,0,0]);
+    v314.fill(false);
+    [1,1,1,1,1];
+    const v329 = new v15([0,0,0,0,0]);
+    v329.fill(true);
+    [0,0,0,0,0];
+    const v344 = new v15([0,0,0,0,0]);
+    v344.fill(null);
+    [8,8,8,8,8];
+    const v359 = new v15([0,0,0,0,0]);
+    v359.fill("8");
+    var n = 1;
+    [1,1];
+    const v368 = {
+        valueOf() {
+            return n++;
+        },
+    };
+    const v370 = new v15(2);
+    v370.fill(v368);
+    var s = [];
+    const v376 = {};
+    const v384 = {
+        get(a378, a379) {
+            s.push(a379.toString());
+            return Reflect.get(a378, a379);
+        },
+    };
+    const v385 = new Proxy(v376, v384);
+    var p = v385;
+    const v388 = new v15(3);
+    v388.fill(p);
+    ["Symbol(Symbol.toPrimitive)","valueOf","toString","Symbol(Symbol.toStringTag)"];
+    const v398 = new v15([2,2]);
+    var a = v398;
+    Object.defineProperty(a, "length", { value: 1 });
+    a.fill(3);
+    [3,3];
+    [a[0],a[1]];
+    Array.prototype.fill.call(a, 4);
+    [4,3];
+    [a[0],a[1]];
+    const v425 = Symbol.toPrimitive;
+    const v431 = {
+        [v425]() {
+            "Parameter should not be processed when " + "array.[[ViewedArrayBuffer]] is detached.";
+            return 0;
+        },
+    };
+    var tmp = v431;
+    const v444 = new v15([1,2,3,4,5,6,7,8,9,10]);
+    var array = v444;
+    const v446 = () => {
+        return array.fill(tmp);
+    };
+    v446();
+}
+for (const v449 of intArrayConstructors) {
+    [0,0,0,0,0];
+    const v463 = new v449([0,0,0,0,0]);
+    v463.fill(undefined);
+    [0,0,0,0,0];
+    const v477 = new v449([0,0,0,0,0]);
+    v477.fill();
+    [0,0,0,0,0];
+    const v492 = new v449([0,0,0,0,0]);
+    v492.fill("abcd");
+}
+for (const v494 of floatArrayConstructors) {
+    [NaN,NaN,NaN,NaN,NaN];
+    const v504 = new v494([0,0,0,0,0]);
+    v504.fill(undefined);
+    [NaN,NaN,NaN,NaN,NaN];
+    const v513 = new v494([0,0,0,0,0]);
+    v513.fill();
+    [NaN,NaN,NaN,NaN,NaN];
+    const v523 = new v494([0,0,0,0,0]);
+    v523.fill("abcd");
+}
+[0,0,0,0,0];
+const v532 = -10;
+const v539 = new Uint8ClampedArray([0,0,0,0,0]);
+v539.fill(v532);
+[255,255,255,255,255];
+const v554 = new Uint8ClampedArray([0,0,0,0,0]);
+v554.fill(1000);
+[1,1,1,1,1];
+const v569 = new Uint8ClampedArray([0,0,0,0,0]);
+v569.fill(0.50001);
+[0,0,0,0,0];
+const v584 = new Uint8ClampedArray([0,0,0,0,0]);
+v584.fill(0.5);
+[0,0,0,0,0];
+const v599 = new Uint8ClampedArray([0,0,0,0,0]);
+v599.fill(0.49999);
+[2,2,2,2,2];
+const v614 = new Uint8ClampedArray([0,0,0,0,0]);
+v614.fill(1.5);
+[2,2,2,2,2];
+const v629 = new Uint8ClampedArray([0,0,0,0,0]);
+v629.fill(2.5);
+[3,3,3,3,3];
+const v644 = new Uint8ClampedArray([0,0,0,0,0]);
+v644.fill(2.50001);
+[0,0,0,0,0];
+const v653 = -Infinity;
+const v660 = new Uint8ClampedArray([0,0,0,0,0]);
+v660.fill(v653);
+[255,255,255,255,255];
+const v674 = new Uint8ClampedArray([0,0,0,0,0]);
+v674.fill(Infinity);

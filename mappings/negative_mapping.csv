@@ -1,0 +1,321 @@
+filename,year,version,flags, rep
+10_40062875.js,2023,10.9.0,--interrupt-budget=1000 --harmony-struct --maglev --stress-maglev --turboshaft, no
+12_40057081.js,9.2.230,2021, --allow-natives-syntax  --expose-gc    --predictable --sparkplug,yes 
+1406162_40062572.js,10.9.1,2023,--allow-natives-syntax --maglev --maglev-inlining --stress-maglev,yes
+1_40064282.js,11.5.150.6, 2023, no
+279d2a53-0d4b-407a-b2bf-ee456a849c8e_40061400.js,wont-fix, 2022,
+5_report_40062572.js, 10.9.1, 2023,--allow-natives-syntax --maglev --maglev-inlining --stress-maglev,yes
+chrome_40059133.js,9.9.115, 2022,
+clusterfuzz-testcase-5686835111657472_40095393.js,7.5,2019,--promiseTestCount --promiseTestCount --always-opt --no-opt,no
+clusterfuzz-testcase-minimized-4902454101344256_40058638.js,9.9,2022,no
+clusterfuzz-testcase-minimized-5686835111657472_40095393.js,7.5,2019,no
+crosher_40089045.js,5.9, 2017,--route --no-log --interface, no
+demo1_40057946.js,9.6,2021,no
+demo2_40057946.js,9.6,2021,no
+deoptimizer.cc_L359_DCHECK_fail_339759428.js,12.4,2024,--profile=v8 --jobs=24 --engine=multi --logLevel=verbose --timeout=1200 --storagePath --resume --exportStatistics --statisticsExportInterval=5 --diagnostics --tag=3ea85f9c --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging
+exploit-worker_40061453.js,10.7,2022, 
+exploit_365376497.js,12.8, 2024,--wasm-staging
+exploit_40065473.js,11.4.183.19,2023,--allow-natives-syntax
+exploit_40067530.js,11.5.150.16,2023,--maglev
+exploit_40095575.js, 7.7.0,2019,--experimental-wasm-anyref
+expl_330575498.js,12.4,2024,
+expl_344963941.js,12.5.227.13,2024,
+exp_323694592.js,14.x,2024,
+exp_40055688.js,9.0.257.23,2021,
+exp_40067050.js,11.4.183,2023,--experimental-wasm-gc
+exp_40067712.js,11.2.0,2023, --experimental-wasm-gc
+ex_41483297.js,	12.0.230.24,2023,--harmony-set-methods
+fail_40090935.js,debug-6.7,2018,--enable-slow-asserts --expose-gc --allow-natives-syntax test/mjsunit/mjsunit.js test/mjsunit/wasm/wasm-constants.js test/mjsunit/wasm/wasm-module-builder.js fail.js
+google_v8_array_prototype_memory_corruption_poc_40094304.js,2019,
+helper1_342602616.js,7.3.492.17,2024,--disable-in-process-stack-traces --trace-opt-verbose  --allow-natives-syntax  --trace-gc
+helper2_342602616.js,7.3.492.17,2024,
+help_40061335.js,10.9,2022,--expose-gc --allow-natives-syntax  --no-sandbox
+leak_40094340.js, 7.0-7.2,2019,
+lib_40050529.js, 7.7.299.13,2019,--allow-natives-syntax
+liveBuildCrash_40094379.js,7.1-7.2, 2019,--allow-natives-syntax
+liveCrash_40094467.js,7.1-7.2,2019,-allow-natives-syntax 
+mini_poc_40948927.js,12.1.0,2023,--turboshaft-wasm
+min_340221135.js,12.4,2024,--module
+oob-regexp_40087250.js,5.2-5.5,2017,
+oob_poc_40948927.js,12.1.0, 2023,--turboshaft-wasm
+osr-deoptdata-confusion_395659804.js,13.3,2025,--sandbox-testing
+poc-full_325893559.js,(debug)12.3.0, 2024,--wasm-wrapper-tiering-budget=1
+poc-new_40067712.js,11.2.0, 2023,--experimental-wasm-gc
+poc-old_40067712.js,2023,
+poc1_40068612.js,11.7.0,2023,--jit-fuzzing --stress-gc-during-compilation --lazy-new-space-shrinking --maglev
+poc1_40093739.js,7.1-7.3,2019,
+poc1_40948441.js,12.1.0,2023,--experimental-wasm-exnref
+poc1_40948479.js,12.1.0,2023,--turboshaft-wasm
+poc1_40948927.js, 12.1.0,2023,--turboshaft-wasm
+poc1_41493286.js,12.2.0,2024, --future --turboshaft-wasm-instruction-selection-staged --allow-natives-syntax 
+poc2_40093739.js,2019,
+poc2_40948479.js,2023,
+poc2_40948927.js,2023,
+poc3_40948479.js,2023,
+poc3_40948927.js,2023,
+poc4_40948927.js,2023,
+poc_325893559.js,2024,--wasm-wrapper-tiering-budget=1
+poc_331241020.js,2024,
+poc_332081797.js,2024,
+poc_345960102.js,2024,
+poc_347724915.js,2024,--expose-gc --omit-quit --future --harmony --assert-types --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing
+poc_349864879.js,2024,--expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging
+poc_351865302.js,2024,--v0
+poc_352352903.js,2024,--jit-fuzzing
+poc_352371710.js,2024,
+poc_353628445.js,2024,--expose-gc --allow-natives-syntax --jit-fuzzing
+poc_356196918.js,2024,--allow-natives-syntax
+poc_359729268.js,2024,--allow-natives-syntax --fuzzing --always-turbofan
+poc_362539773.js,2024,--allow-natives-syntax --jit-fuzzing
+poc_365376497.js,2024,--experimental-wasm-jspi
+poc_366381662.js,2024,--allow-natives-syntax
+poc_369630648.js,2024,
+poc_372932101.js,2024,--expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony
+poc_373928206.js,2024,--allow-natives-syntax --fuzzing --optimize-on-next-call-optimizes-to-maglev --max-lazy
+poc_374811614.js,2024,--expose-gc --allow-natives-syntax --jit-fuzzing --optimize-on-next-call-optimizes-to-maglev
+poc_375314963.js,2024,
+poc_376818204.js,2024,
+poc_380474992.js,2024,--disable-in-process-stack-traces
+poc_380487911.js,2024,
+poc_380604249.js,2024,
+poc_381390367.js,2024,
+poc_381696874.js,2024,
+poc_382190919.js,2024,--i40 --allow-natives-syntax
+poc_383647255.js,2024,--expose-gc
+poc_384186547.js,2024,
+poc_385155406.js,2024,--resume --jobs=56 --profile=v8 --instanceType=root --storagePath --bindTo=172 --expose-gc --expose-externalize-string --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --wasm-staging
+poc_385386138.js,2024,
+poc_385775375.js,2024,
+poc_386143468.js,2024,--allow-natives-syntax --no-concurrent-recompilation
+poc_386487312.js,2024,
+poc_386565139.js,2024,--sandbox-testing --allow-natives-syntax
+poc_386565144.js,2024,--allow-natives-syntax --script-context-mutable-heap-int32
+poc_390743124.js,2025,--allow-natives-syntax --allow-natives-syntax
+poc_392521083.js,2025,--stress-incremental-marking --expose-gc --allow-natives-syntax --single-threaded --stress-incremental-marking
+poc_393989622.js,2025,--single-threaded --sandbox-fuzzing --allow-natives-syntax --expose-gc
+poc_397720949.js,2025,--js-float16array
+poc_397731718.js,2025,
+poc_398431403.js,2025,--allow-natives-syntax --jit-fuzzing
+poc_398999390.js,2025,
+poc_400052777.js,2025,--allow-natives-syntax
+poc_40051480.js,2020,
+poc_40051527.js,2020,
+poc_40051991.js,2020,
+poc_40052054.js,2020,
+poc_40052820.js,2020,
+poc_40053323.js,2020,
+poc_40053739.js,2020,--allow-natives-syntax
+poc_40054578.js,2021,
+poc_40054989.js,2021,--allow-natives-syntax --expose-gc ------------------- ------------------ ------------------- ------------------ --allow-natives-syntax --expose-gc
+poc_40055446.js,2021,
+poc_40055451.js,2021,
+poc_40055540.js,2021,
+poc_40055688.js,2021,
+poc_40055882.js,2021,
+poc_40056355.js,2021,
+poc_40056529.js,2021,--wasm-staging
+poc_40056730.js,2021,
+poc_40056860.js,2021,
+poc_40056975.js,2021,
+poc_40057609.js,2021,
+poc_40057710.js,2021,
+poc_40057873.js,2021,
+poc_40058061.js,2021,
+poc_40058134.js,2021,
+poc_400584607.js,2025,--allow-natives-syntax --stress-gc-during-compilation --stress-incremental-marking --predictable-gc-schedule --predictable --maglev-pretenure-store-values
+poc_40058995.js,2022,
+poc_40059133.js,2022,
+poc_40059162.js,2022,
+poc_40059244.js,2022,
+poc_40059312.js,2022,
+poc_40059369.js,2022,
+poc_40059400.js,2022,
+poc_40059498.js,2022,
+poc_40059549.js,2022,--no-lazy-feedback-allocation
+poc_40059979.js,2022,
+poc_40060077.js,2022,
+poc_40060419.js,2022,--harmony-rab-gsab
+poc_40060736.js,2022,
+poc_40060819.js,2022,
+poc_40060841.js,2022,--random-seed=-1983051303 --fuzzing --fuzzing --disable-abortjs --disable-in-process-stack-traces --assert-types --stress-flush-code --no-enable-ssse3 --maglev --no-enable-lzcnt --no-lazy-feedback-allocation --fuzzing
+poc_40060946.js,2022,
+poc_40061099.js,2022,--no-sandbox --disable-gpu
+poc_40061150.js,2022,--allow-natives-syntax --maglev
+poc_40061184.js,2022,
+poc_40061447.js,2022,
+poc_40061451.js,2022,
+poc_40061456a.js,2022,--allow-natives-syntax --harmony-rab-gsab
+poc_40061456b.js,2022,--allow-natives-syntax --harmony-rab-gsab
+poc_40061500.js,2022,
+poc_40061549.js,2022,
+poc_40061589.js,2022,--predictable --allow-natives-syntax --interrupt-budget=1024 --maglev --fuzzing
+poc_40061653.js,2022,
+poc_40061748.js,2022,
+poc_40061773.js,2022,--allow-natives-syntax --harmony_temporal
+poc_40061784.js,2022,
+poc_40061849.js,2022,--allow-natives-syntax --maglev
+poc_40061863.js,2022,--harmony-rab-gsab
+poc_40061894.js,2022,
+poc_40061900.js,2022,--harmony-rab-gsab
+poc_40061930.js,2022,
+poc_40061946.js,2022,
+poc_40061952.js,2022,
+poc_40062058.js,2022,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing
+poc_40062102.js,2022,
+poc_40062163.js,2022,
+poc_40062164.js,2022,
+poc_40062345.js,2022,--expose-gc --future --harmony --assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing
+poc_40062346.js,2022,
+poc_40062384.js,2022,
+poc_40062432.js,2022,
+poc_40062594.js,2023,--expose-gc --future --harmony --harmony-rab-gsab --allow-natives-syntax --interrupt-budget=1000 --fuzzing --maglev --maglev-inlining --maglev-reuse-stack-slots --stress-maglev --maglev-assert --maglev-function-context-specialization --maglev-ool-prologue --sparkplug --lazy --no-always-osr --force-slow-path --turbo-move-optimization --turbo-jt --turbo-loop-peeling --turbo-loop-variable --turbo-loop-rotation --turbo-cf-optimization --turbo-escape --turbo-allocation-folding --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --turbo-store-elimination --turbo-rewrite-far-jumps --turbo-optimize-apply --no-enable-sse4-2 --turbo-load-elimination --turbo-inlining --turbo-splitting
+poc_40062631.js,2023,--expose-gc --omit-quit --future --harmony --assert-types --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing
+poc_40062633.js,2023,--expose-gc --future --harmony
+poc_40062671.js,2023,--expose-gc --future --harmony --assert-types --maglev-assert --turboshaft-assert-types --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing --maglev --maglev-inlining --turbo-compress-translation-arrays --turboshaft --verify-heap --flush-baseline-code
+poc_40062684.js,2023,
+poc_40062717.js,2023,--v2 --assert-types --turboshaft
+poc_40062816.js,2023,
+poc_40062854.js,2023,
+poc_40062884.js,2023,
+poc_40062890.js,2023,--allow-natives-syntax --turboshaft
+poc_40063046.js,2023,--always-turbofan
+poc_40063074.js,2023,
+poc_40063140.js,2023,--v6 --expose-gc --future --harmony --assert-types --enable-slow-asserts --maglev-assert --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --maglev --fuzzing --no-sparkplug --opt --lazy --allow-natives-syntax --always-osr --no-always-turbofan --no-force-slow-path --turbo-move-optimization --turbo-jt --turbo-loop-peeling --turbo-loop-variable --turbo-loop-rotation --turbo-cf-optimization --turbo-escape --turbo-allocation-folding --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --no-turbo-store-elimination --turbo-rewrite-far-jumps --turbo-optimize-apply --no-enable-sse3 --turbo-load-elimination --turbo-inlining --turbo-splitting --lazy-feedback-allocation --allow-natives-syntax --allow-natives-syntax --expose-gc
+poc_40063148.js,2023,
+poc_40063286.js,2023,--future --assert-types --enable-slow-asserts --maglev-assert --sparkplug --no-opt --lazy
+poc_40063372.js,2023,
+poc_40063393.js,2023,--turboshaft
+poc_40063397.js,2023,--turboshaft
+poc_40063399.js,2023,
+poc_40063500.js,2023,
+poc_40063542.js,2023,--future --expose-gc
+poc_40063590.js,2023,
+poc_40063597.js,2023,
+poc_40063616.js,2023,--expose-gc --future --harmony --assert-types --maglev-assert --harmony-rab-gsab --harmony-struct --allow-natives-syntax --interrupt-budget=1000 --fuzzing --sparkplug --no-opt --lazy --allow-natives-syntax --no-always-osr --no-always-turbofan --no-force-slow-path --turbo-move-optimization --turbo-jt --no-turbo-loop-peeling --turbo-loop-variable --turbo-loop-rotation --turbo-cf-optimization --turbo-escape --turbo-allocation-folding --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --no-turbo-store-elimination --turbo-rewrite-far-jumps --turbo-optimize-apply --no-enable-ssse3 --turbo-load-elimination --turbo-inlining --turbo-splitting --lazy-feedback-allocation --turbo-filter=match --allow-natives-syntax --shared-string-table
+poc_40063644.js,2023,
+poc_40063673.js,2023,--harmony-struct
+poc_40063674.js,2023,--maglev
+poc_40063757.js,2023,
+poc_40063818.js,2023,
+poc_40063989.js,2023,
+poc_40064002.js,2023,
+poc_40064124.js,2023,--expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --minor-mc --shared-string-table --expose-externalize-string --single-threaded
+poc_40064391.js,2023,--maglev
+poc_40064428.js,2023,
+poc_40064503.js,2023,--always-use-string-forwarding-table --expose-externalize-string
+poc_40064655.js,2023,--maglev --always-turbofan --assert-types
+poc_40064748.js,2023,--expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --harmony-struct --shared-string-table --no-turbofan --expose-externalize-string --thread-pool-size=3
+poc_40064863.js,2023,--allow-natives-syntax --no-lazy-feedback-allocation
+poc_40064946.js,2023,
+poc_40064983.js,2023,--future --allow-natives-syntax
+poc_40065138.js,2023,
+poc_40065188.js,2023,--allow-natives-syntax --fuzzing
+poc_40065463.js,2023,
+poc_40066778.js,2023,--experimental-wasm-gc
+poc_40067050.js,2023,
+poc_40067341.js,2023,
+poc_40067485.js,2023,
+poc_40067945.js,2023,
+poc_40068179.js,2023,--allow-natives-syntax --future --always-turbofan --no-turbo-loop-peeling
+poc_40068834.js,2023,
+poc_40068915.js,2023,
+poc_40069079.js,2023,--future --assert-types --turboshaft-assert-types
+poc_40069222.js,2023,
+poc_40069328.js,2023,
+poc_40069589.js,2023,
+poc_40069590.js,2023,--expose-gc --future --always-turbofan --turboshaft-future
+poc_40069798.js,2023,
+poc_40070055.js,2023,--expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --js-staging --shared-string-table --minor-ms
+poc_40070732.js,2023,
+poc_40072287.js,2023,
+poc_40073390.js,2023,
+poc_40075744.js,2023,--allow-natives-syntax --expose-gc --maglev-inline-api-calls
+poc_402646504.js,2025,--allow-natives-syntax
+poc_403211343.js,2025,--expose-gc --omit-quit --allow-natives-syntax --no-turboshaft-loop-unrolling --turboshaft-loop-peeling
+poc_403600260.js,2025,--sandbox-testing --single-threaded --sandbox-testing --single-threaded --sandbox-testing --single-threaded
+poc_40821462.js,2022,
+poc_40838427.js,2022,
+poc_40941600.js,2023,
+poc_40948441.js,2023,
+poc_40948479.js,2023,
+poc_40948927.js,2023,
+poc_41483711.js,2023,
+poc_41484431.js,2023,
+poc_41485059.js,2023,
+poc_41486150.js,2023,
+poc_41486862.js,2023,
+poc_41488920.js,2024,
+poc_41491373.js,2024,--allow-natives-syntax --turboshaft-loop-peeling --stress-gc-during-compilation
+poc_41493175.js,2024,--allow-natives-syntax --jit-fuzzing --optimize-for-size --stress-concurrent-allocation
+poc_41493285.js,2024,
+poc_41493286.js,2024,
+poc_41493674.js,2024,--allow-natives-syntax --jit-fuzzing --turboshaft-loop-peeling
+poc_41494611.js,2024,--allow-natives-syntax --optimize-on-next-call-optimizes-to-maglev --maglev-cse
+poc_41494754.js,2024,
+poc_41496366.js,2024,--profile=v8 --timeout=500 --storagePath --jobs=80 --argumentRandomization --importCorpus --staticCorpus --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --turboshaft-csa
+poc_asan_oob_41484431.js,2023,
+poc_asan_oob_code_41484431.js,2023,
+poc_caseofyear_398065918.js,2025,
+poc_code1_41493286.js,2024,
+poc_code_41483711.js,2023,
+poc_code_41484431.js,2023,
+poc_code_41485059.js,2023,
+poc_code_41486150.js,2023,
+poc_code_41486862.js,2023,
+poc_code_41493285.js,2024,
+poc_code_41493286.js,2024,
+poc_crash_365376497.js,2024,--experimental-wasm-jspi
+poc_differential_376307767.js,2024,
+poc_differential_396485545.js,2025,
+poc_differential_40051550.js,2020,--correctness-fuzzer-suppressions --expose-gc --allow-natives-for-differential-fuzzing --invoke-weak-callbacks --omit-quit --es-staging --wasm-staging --no-wasm-async-compilation --suppress-asm-messages --random-seed --always-opt --no-liftoff
+poc_differential_40055561.js,2021,--allow-natives-syntax --jitless
+poc_differential_40061881.js,2022,
+poc_differential_401073454.js,2025,
+poc_differential_406871259.js,2025,
+poc_differential_40943982.js,2023,--allow-natives-syntax --turboshaft-assert-types --turboshaft-trace-typing
+poc_minimized_40054275.js,2020,
+program_20210916011653_C993D635-1505-44C5-930D-C8EAFFEB6D28_flaky_40057298.js,2021,
+program_20231202114925_4DDEF1B6-6A57-4456-AE42-0EEDE9E79E2D_flaky_40948107.js,2023,--jobs=28 --profile=v8 --timeout=800 --storagePath --importCorpus --corpusImportMode=full --argumentRandomization --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --no-harmony-set-methods --no-enable-sharedarraybuffer-per-context --maglev-inline-api-calls --concurrent-maglev-high-priority-threads --no-optimize-on-next-call-optimizes-to-maglev --no-jitless --osr-from-maglev --always-osr-from-maglev --no-stress-lazy-source-positions --concurrent-sparkplug-high-priority-threads --no-sparkplug-needs-short-builtins --no-shared-string-table --no-transition-strings-during-gc-with-stack --no-stress-concurrent-inlining-attach-code --stress-turbo-late-spilling --no-stress-inline --reorder-builtins --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --stress-gc-during-compilation --turboshaft-instruction-selection --no-turboshaft-wasm-instruction-selection-staged --no-turboshaft-verify-reductions --no-optimize-for-size --no-stress-wasm-code-gc --no-lazy-new-space-shrinking --no-separate-gc-phases --no-gc-global --scavenge-separate-stack-scanning --optimize-gc-for-battery --no-verify-heap --no-compact-on-every-full-gc --stress-compaction --no-stress-compaction-random --no-flush-baseline-code --flush-code-based-on-time --stress-flush-code --no-stress-per-context-marking-worklist --no-stress-incremental-marking --no-concurrent-marking-high-priority-threads --no-randomize-all-allocations --manual-evacuation-candidates-selection --no-enable-source-at-csa-bind --no-stress-background-compile --no-embedder-instance-types --no-expose-externalize-string --no-allow-unsafe-function-constructor --no-force-slow-path --no-max-lazy --always-turbofan --no-always-osr --prepare-always-turbofan --no-deopt-to-baseline --parallel-compile-tasks-for-eager-toplevel --no-expose-inspector-scripts --no-mega-dom-ic --no-regexp-interpret-all --no-minor-ms --no-slow-histograms --use-external-strings
+program_20231202211949_F2F3F4A6-A713-4164-A8D8-72485EFA79F3_flaky_40948107.js,2023,--jobs=28 --profile=v8 --timeout=800 --storagePath --importCorpus --corpusImportMode=full --argumentRandomization --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --no-harmony-set-methods --no-enable-sharedarraybuffer-per-context --maglev-inline-api-calls --concurrent-maglev-high-priority-threads --no-optimize-on-next-call-optimizes-to-maglev --no-jitless --osr-from-maglev --always-osr-from-maglev --no-stress-lazy-source-positions --concurrent-sparkplug-high-priority-threads --no-sparkplug-needs-short-builtins --no-shared-string-table --no-transition-strings-during-gc-with-stack --no-stress-concurrent-inlining-attach-code --stress-turbo-late-spilling --no-stress-inline --reorder-builtins --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --stress-gc-during-compilation --turboshaft-instruction-selection --no-turboshaft-wasm-instruction-selection-staged --no-turboshaft-verify-reductions --no-optimize-for-size --no-stress-wasm-code-gc --no-lazy-new-space-shrinking --no-separate-gc-phases --no-gc-global --scavenge-separate-stack-scanning --optimize-gc-for-battery --no-verify-heap --no-compact-on-every-full-gc --stress-compaction --no-stress-compaction-random --no-flush-baseline-code --flush-code-based-on-time --stress-flush-code --no-stress-per-context-marking-worklist --no-stress-incremental-marking --no-concurrent-marking-high-priority-threads --no-randomize-all-allocations --manual-evacuation-candidates-selection --no-enable-source-at-csa-bind --no-stress-background-compile --no-embedder-instance-types --no-expose-externalize-string --no-allow-unsafe-function-constructor --no-force-slow-path --no-max-lazy --always-turbofan --no-always-osr --prepare-always-turbofan --no-deopt-to-baseline --parallel-compile-tasks-for-eager-toplevel --no-expose-inspector-scripts --no-mega-dom-ic --no-regexp-interpret-all --no-minor-ms --no-slow-histograms --use-external-strings
+program_20231202223653_DFC5A2A0-B04B-4F95-8743-332C5F439182_flaky_40948107.js,2023,--jobs=28 --profile=v8 --timeout=800 --storagePath --importCorpus --corpusImportMode=full --argumentRandomization --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --no-harmony-set-methods --no-enable-sharedarraybuffer-per-context --maglev-inline-api-calls --concurrent-maglev-high-priority-threads --no-optimize-on-next-call-optimizes-to-maglev --no-jitless --osr-from-maglev --always-osr-from-maglev --no-stress-lazy-source-positions --concurrent-sparkplug-high-priority-threads --no-sparkplug-needs-short-builtins --no-shared-string-table --no-transition-strings-during-gc-with-stack --no-stress-concurrent-inlining-attach-code --stress-turbo-late-spilling --no-stress-inline --reorder-builtins --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --stress-gc-during-compilation --turboshaft-instruction-selection --no-turboshaft-wasm-instruction-selection-staged --no-turboshaft-verify-reductions --no-optimize-for-size --no-stress-wasm-code-gc --no-lazy-new-space-shrinking --no-separate-gc-phases --no-gc-global --scavenge-separate-stack-scanning --optimize-gc-for-battery --no-verify-heap --no-compact-on-every-full-gc --stress-compaction --no-stress-compaction-random --no-flush-baseline-code --flush-code-based-on-time --stress-flush-code --no-stress-per-context-marking-worklist --no-stress-incremental-marking --no-concurrent-marking-high-priority-threads --no-randomize-all-allocations --manual-evacuation-candidates-selection --no-enable-source-at-csa-bind --no-stress-background-compile --no-embedder-instance-types --no-expose-externalize-string --no-allow-unsafe-function-constructor --no-force-slow-path --no-max-lazy --always-turbofan --no-always-osr --prepare-always-turbofan --no-deopt-to-baseline --parallel-compile-tasks-for-eager-toplevel --no-expose-inspector-scripts --no-mega-dom-ic --no-regexp-interpret-all --no-minor-ms --no-slow-histograms --use-external-strings
+program_20231203004608_9125402D-2FEC-4F7C-B929-767021731303_flaky_40948107.js,2023,--jobs=28 --profile=v8 --timeout=800 --storagePath --importCorpus --corpusImportMode=full --argumentRandomization --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --no-harmony-set-methods --no-enable-sharedarraybuffer-per-context --maglev-inline-api-calls --concurrent-maglev-high-priority-threads --no-optimize-on-next-call-optimizes-to-maglev --no-jitless --osr-from-maglev --always-osr-from-maglev --no-stress-lazy-source-positions --concurrent-sparkplug-high-priority-threads --no-sparkplug-needs-short-builtins --no-shared-string-table --no-transition-strings-during-gc-with-stack --no-stress-concurrent-inlining-attach-code --stress-turbo-late-spilling --no-stress-inline --reorder-builtins --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --stress-gc-during-compilation --turboshaft-instruction-selection --no-turboshaft-wasm-instruction-selection-staged --no-turboshaft-verify-reductions --no-optimize-for-size --no-stress-wasm-code-gc --no-lazy-new-space-shrinking --no-separate-gc-phases --no-gc-global --scavenge-separate-stack-scanning --optimize-gc-for-battery --no-verify-heap --no-compact-on-every-full-gc --stress-compaction --no-stress-compaction-random --no-flush-baseline-code --flush-code-based-on-time --stress-flush-code --no-stress-per-context-marking-worklist --no-stress-incremental-marking --no-concurrent-marking-high-priority-threads --no-randomize-all-allocations --manual-evacuation-candidates-selection --no-enable-source-at-csa-bind --no-stress-background-compile --no-embedder-instance-types --no-expose-externalize-string --no-allow-unsafe-function-constructor --no-force-slow-path --no-max-lazy --always-turbofan --no-always-osr --prepare-always-turbofan --no-deopt-to-baseline --parallel-compile-tasks-for-eager-toplevel --no-expose-inspector-scripts --no-mega-dom-ic --no-regexp-interpret-all --no-minor-ms --no-slow-histograms --use-external-strings
+program_20231203013939_F30B454F-44CF-4A98-AE98-122CA44DFECC_flaky_40948107.js,2023,--jobs=28 --profile=v8 --timeout=800 --storagePath --importCorpus --corpusImportMode=full --argumentRandomization --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --no-harmony-set-methods --no-enable-sharedarraybuffer-per-context --maglev-inline-api-calls --concurrent-maglev-high-priority-threads --no-optimize-on-next-call-optimizes-to-maglev --no-jitless --osr-from-maglev --always-osr-from-maglev --no-stress-lazy-source-positions --concurrent-sparkplug-high-priority-threads --no-sparkplug-needs-short-builtins --no-shared-string-table --no-transition-strings-during-gc-with-stack --no-stress-concurrent-inlining-attach-code --stress-turbo-late-spilling --no-stress-inline --reorder-builtins --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --stress-gc-during-compilation --turboshaft-instruction-selection --no-turboshaft-wasm-instruction-selection-staged --no-turboshaft-verify-reductions --no-optimize-for-size --no-stress-wasm-code-gc --no-lazy-new-space-shrinking --no-separate-gc-phases --no-gc-global --scavenge-separate-stack-scanning --optimize-gc-for-battery --no-verify-heap --no-compact-on-every-full-gc --stress-compaction --no-stress-compaction-random --no-flush-baseline-code --flush-code-based-on-time --stress-flush-code --no-stress-per-context-marking-worklist --no-stress-incremental-marking --no-concurrent-marking-high-priority-threads --no-randomize-all-allocations --manual-evacuation-candidates-selection --no-enable-source-at-csa-bind --no-stress-background-compile --no-embedder-instance-types --no-expose-externalize-string --no-allow-unsafe-function-constructor --no-force-slow-path --no-max-lazy --always-turbofan --no-always-osr --prepare-always-turbofan --no-deopt-to-baseline --parallel-compile-tasks-for-eager-toplevel --no-expose-inspector-scripts --no-mega-dom-ic --no-regexp-interpret-all --no-minor-ms --no-slow-histograms --use-external-strings
+program_20231203030957_557F1142-4278-457A-ACF6-7D57F68712CD_flaky_40948107.js,2023,--i83 --jobs=28 --profile=v8 --timeout=800 --storagePath --importCorpus --corpusImportMode=full --argumentRandomization --expose-gc --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --no-harmony-set-methods --no-enable-sharedarraybuffer-per-context --maglev-inline-api-calls --concurrent-maglev-high-priority-threads --no-optimize-on-next-call-optimizes-to-maglev --no-jitless --osr-from-maglev --always-osr-from-maglev --no-stress-lazy-source-positions --concurrent-sparkplug-high-priority-threads --no-sparkplug-needs-short-builtins --no-shared-string-table --no-transition-strings-during-gc-with-stack --no-stress-concurrent-inlining-attach-code --stress-turbo-late-spilling --no-stress-inline --reorder-builtins --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --stress-gc-during-compilation --turboshaft-instruction-selection --no-turboshaft-wasm-instruction-selection-staged --no-turboshaft-verify-reductions --no-optimize-for-size --no-stress-wasm-code-gc --no-lazy-new-space-shrinking --no-separate-gc-phases --no-gc-global --scavenge-separate-stack-scanning --optimize-gc-for-battery --no-verify-heap --no-compact-on-every-full-gc --stress-compaction --no-stress-compaction-random --no-flush-baseline-code --flush-code-based-on-time --stress-flush-code --no-stress-per-context-marking-worklist --no-stress-incremental-marking --no-concurrent-marking-high-priority-threads --no-randomize-all-allocations --manual-evacuation-candidates-selection --no-enable-source-at-csa-bind --no-stress-background-compile --no-embedder-instance-types --no-expose-externalize-string --no-allow-unsafe-function-constructor --no-force-slow-path --no-max-lazy --always-turbofan --no-always-osr --prepare-always-turbofan --no-deopt-to-baseline --parallel-compile-tasks-for-eager-toplevel --no-expose-inspector-scripts --no-mega-dom-ic --no-regexp-interpret-all --no-minor-ms --no-slow-histograms --use-external-strings
+proxy_40067530.js,2023,
+p_40061951.js,2022,--bytecode-old-age=3
+repro-issue_360044696.js,2024,--wasm-staging --turboshaft-wasm --allow-natives-syntax --wasm-inlining-ignore-call-counts --wasm-inlining-factor=1 --nodebug-code
+repro-issue_363826217.js,2024,--wasm-deopt --turboshaft-wasm --allow-natives-syntax --no-jit-fuzzing --wasm-inlining-ignore-call-counts --liftoff
+reproducer_40055069.js,2021,
+repro_40051542.js,2020,
+repro_41483297.js,2023,
+rrr_40065644.js,2023,--expose-gc --future --harmony --harmony-rab-gsab --allow-natives-syntax --fuzzing --assert-types --turboshaft-assert-types --turboshaft --turboshaft-wasm --always-turbofan --maglev --maglev-inlining --maglev-reuse-stack-slots --stress-maglev --maglev-assert --maglev-function-context-specialization --sparkplug --lazy --no-always-osr --force-slow-path --turbo-move-optimization --turbo-jt --turbo-loop-peeling --turbo-loop-variable --turbo-loop-rotation --turbo-cf-optimization --turbo-escape --turbo-allocation-folding --turbo-instruction-scheduling --turbo-stress-instruction-scheduling --turbo-store-elimination --turbo-rewrite-far-jumps --turbo-optimize-apply --no-enable-sse4-2 --turbo-load-elimination --turbo-inlining --turbo-splitting
+rw_exploit_400052777.js,2025,--allow-natives-syntax
+rw_exploit_no_flags_400052777.js,2025,
+sample_40053301.js,2020,
+spec_mod_40055596.js,2021,
+spec_mul_40055596.js,2021,
+stackcheck_40065473.js,2023,
+super_ctor_40067530.js,2023,
+template_expl_330575498.js,2024,
+test1_323694592.js,2024,
+testcase1_40094379.js,2019,
+testcase2_40094379.js,2019,
+testcase_40086620.js,2017,
+test_323694592.js,2024,
+test_40052510.js,2020,--wasm-staging
+test_40054429.js,2021,
+test_40059026.js,2022,
+test_40067712.js,2023,
+test_40093076.js,2018,
+type-mismatch_40059979.js,2022,
+typedarray-set-wildcopy_391169061.js,2025,
+v8_poc_40094287.js,2019,
+variable_proxy_40050455.js,2019,
+wasm-module-builder_323694592.js,2024,
+wasmt_40073339.js,2023,
+wasm_40067181.js,2023,
+wasm_idb_worker_40092350.js,2018,
+wasm_xpl_40089045.js,2017,
+wasm_xpl_40089046.js,2017,
+worker_40089891.js,2017,
+write_40094340.js,2019,

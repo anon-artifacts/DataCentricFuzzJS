@@ -1,0 +1,32 @@
+function write(a1) {
+    print(a1 + "");
+}
+const v7 = new Object();
+var o = v7;
+var a = [11,12,13];
+a[o] = 100;
+a.x = 200;
+o.x = 300;
+a.some = undefined;
+write("------------ hasOwnProperty ------------");
+write(o.hasOwnProperty("x"));
+write(o.hasOwnProperty("y"));
+write(o.hasOwnProperty(""));
+write(o.hasOwnProperty());
+write(a.hasOwnProperty(0));
+write(a.hasOwnProperty(1));
+write(a.hasOwnProperty(2));
+write(a.hasOwnProperty(3));
+write(a.hasOwnProperty("0"));
+write(a.hasOwnProperty("1"));
+write(a.hasOwnProperty("2"));
+write(a.hasOwnProperty("3"));
+write(a.hasOwnProperty("x"));
+write(a.hasOwnProperty("some"));
+write(a.hasOwnProperty("y"));
+write(a.hasOwnProperty(""));
+write(a.hasOwnProperty("length"));
+write(a.hasOwnProperty());
+write(a.hasOwnProperty(o));
+write(a.hasOwnProperty("o"));
+write(a.hasOwnProperty("[object Object]"));

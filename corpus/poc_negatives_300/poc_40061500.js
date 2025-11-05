@@ -1,0 +1,16 @@
+let v1;
+function f0(v4) {
+    v4(() => { }, v5 => {
+        v1 = v5.errors;
+    });
+}
+f0.resolve = function (v6) {
+    return v6;
+};
+let v3 = {
+    then(v7, v8) {
+        v8();
+    }
+};
+Promise.any.call(f0, [v3]);
+console.log(v1[1]);

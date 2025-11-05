@@ -1,0 +1,11 @@
+console.log("Reduced test case for https://bugs.webkit.org/show_bug.cgi?id=83818");
+const v5 = new Uint16Array(8);
+a = v5;
+const v12 = new Uint8Array(a.buffer, 0, 2);
+b = v12;
+b[0] = 5;
+b[1] = 5;
+a[0];
+a.set(b);
+a[0];
+a[1];

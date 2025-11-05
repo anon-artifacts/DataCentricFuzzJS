@@ -1,0 +1,21 @@
+new WeakMap();
+new WeakMap(undefined);
+new WeakMap(null);
+const v6 = () => {
+    let v7;
+    try { v7 = WeakMap(); } catch (e) {}
+    return v7;
+};
+v6();
+const v10 = () => {
+    let v12;
+    try { v12 = WeakMap(undefined); } catch (e) {}
+    return v12;
+};
+v10();
+const v14 = () => {
+    let v16;
+    try { v16 = WeakMap(null); } catch (e) {}
+    return v16;
+};
+v14();

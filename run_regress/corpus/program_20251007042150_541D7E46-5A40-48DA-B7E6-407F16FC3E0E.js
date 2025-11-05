@@ -1,0 +1,38 @@
+var gTestfile = "__proto__.js";
+var BUGNUMBER = 770344;
+var summary = "__proto__ as accessor";
+print((BUGNUMBER + ": ") + summary);
+var protoDesc = Object.getOwnPropertyDescriptor(Object.prototype, "__proto__");
+protoDesc !== null;
+typeof protoDesc;
+protoDesc.hasOwnProperty("get");
+protoDesc.hasOwnProperty("set");
+protoDesc.hasOwnProperty("enumerable");
+protoDesc.hasOwnProperty("configurable");
+protoDesc.hasOwnProperty("value");
+protoDesc.hasOwnProperty("writable");
+protoDesc.configurable;
+protoDesc.enumerable;
+typeof protoDesc.get;
+protoDesc.get + "";
+typeof protoDesc.set;
+protoDesc.set + "";
+const t5 = Object.prototype;
+delete t5.__proto__;
+Object.getOwnPropertyDescriptor(Object.prototype, "__proto__");
+var obj = {};
+obj.__proto__ = 5;
+Object.getPrototypeOf(obj);
+Object.prototype;
+obj.hasOwnProperty("__proto__");
+var desc = Object.getOwnPropertyDescriptor(obj, "__proto__");
+desc !== null;
+typeof desc;
+desc.value;
+desc.writable;
+desc.enumerable;
+desc.configurable;
+if (typeof reportCompare === "function") {
+    reportCompare(true, true);
+}
+print("Tests complete");

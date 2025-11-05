@@ -1,0 +1,2 @@
+("").normalize();
+typeof reportCompare === "function";

@@ -1,0 +1,38 @@
+console.log("Tests to make sure we correctly repack a Map with object keys");
+const v4 = new Map();
+var map = v4;
+function Obj(a7) {
+    this.n = a7;
+}
+const v10 = new Obj(0);
+map.set(v10, []);
+const v14 = new Obj(1);
+map.set(v14, []);
+const v18 = new Obj(2);
+map.set(v18, []);
+const v22 = new Obj(3);
+map.set(v22, []);
+const v26 = new Obj(4);
+map.set(v26, []);
+const v30 = new Obj(5);
+map.set(v30, []);
+const v34 = new Obj(6);
+map.set(v34, []);
+const v38 = new Obj(7);
+map.set(v38, []);
+const v42 = new Obj(8);
+var newObject1 = v42;
+const v45 = new Obj(9);
+var newObject2 = v45;
+map.set(newObject1, []);
+map.set(newObject2, []);
+map.delete(newObject1);
+map.delete(newObject2);
+map.set(newObject1, []);
+map.set(newObject2, []);
+map.delete(newObject1);
+map.delete(newObject2);
+map.set(newObject1, []);
+Array.isArray(map.get(newObject1));
+map.set(newObject2, []);
+Array.isArray(map.get(newObject1));

@@ -1,0 +1,12 @@
+const v1 = new Map();
+var m = v1;
+m.set("a", 0);
+m.size;
+m.set("a", 0);
+m.size;
+m.set("a", undefined);
+m.size;
+m.set("b", 2);
+m.size;
+m.set("a", 1);
+m.size;

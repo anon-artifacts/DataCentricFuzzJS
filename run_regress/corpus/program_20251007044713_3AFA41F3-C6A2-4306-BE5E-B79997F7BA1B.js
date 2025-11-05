@@ -1,0 +1,10 @@
+const v4 = new Array(1, 2, 1);
+var a = v4;
+a.lastIndexOf(2);
+a.lastIndexOf(1);
+a.lastIndexOf(1, undefined);
+a.lastIndexOf(1, null);
+-1;
+a.lastIndexOf(2, undefined);
+-1;
+a.lastIndexOf(2, null);

@@ -1,0 +1,12 @@
+var key = {};
+const v3 = new WeakMap();
+var map = v3;
+Object.preventExtensions(key);
+map.has(key);
+map.get(key);
+map.set(key, 1);
+map.has(key);
+map.get(key);
+map.delete(key, 1);
+map.has(key);
+map.get(key);

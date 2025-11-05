@@ -1,0 +1,1 @@
+var o = Object.preventExtensions({});

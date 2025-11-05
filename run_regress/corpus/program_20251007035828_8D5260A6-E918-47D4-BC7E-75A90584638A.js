@@ -1,0 +1,30 @@
+const v11 = new Map([[1,2],[2,3],[3,4]]);
+var map = v11;
+const v18 = new Set([1,2,3]);
+var set = v18;
+var iterator = set.keys();
+const v22 = () => {
+    const v23 = () => {
+        return { done: true };
+    };
+    return { next: v23 };
+};
+iterator[Symbol.iterator] = v22;
+[[1,2],[2,3],[3,4]];
+[...map];
+[[1,2],[2,3],[3,4]];
+[...map.entries()];
+[1,2,3];
+[...map.keys()];
+[2,3,4];
+[...map.values()];
+[[1,1],[2,2],[3,3]];
+[...set.entries()];
+[1,2,3];
+[...set];
+[1,2,3];
+[...set.keys()];
+[1,2,3];
+[...set.values()];
+[];
+[...iterator];

@@ -1,0 +1,33 @@
+function foo() {
+}
+const v7 = new Boolean(true);
+const v9 = new Boolean(false);
+const v12 = +0;
+const v14 = -0;
+const v20 = Number.MAX_VALUE;
+const v21 = Number.MIN_VALUE;
+const v22 = Number.NaN;
+const v23 = Number.POSITIVE_INFINITY;
+const v24 = Number.NEGATIVE_INFINITY;
+const v25 = new Number(NaN);
+const v28 = new Number(+0);
+const v31 = new Number(-0);
+const v33 = new Number(0);
+const v35 = new Number(1);
+const v37 = new Number(10);
+const v39 = new Number(10.1);
+const v41 = new Number(Number.MAX_VALUE);
+const v43 = new Number(Number.MIN_VALUE);
+const v45 = new Number(Number.NaN);
+const v47 = new Number(Number.POSITIVE_INFINITY);
+const v49 = new Number(Number.NEGATIVE_INFINITY);
+const v54 = "hel" + "lo";
+const v57 = new String("");
+const v59 = new String("hello");
+const v63 = new String("he" + "llo");
+const v65 = new Object();
+const v69 = [1,2,3];
+const v70 = new Object();
+const v74 = [1,2,3];
+const v77 = new Date("2011-12-14T12:47:42.658Z");
+var all = [,null,true,false,v7,v9,NaN,v12,v14,0,1,10,10.1,v20,v21,v22,v23,v24,v25,v28,v31,v33,v35,v37,v39,v41,v43,v45,v47,v49,"","hello",v54,v57,v59,v63,v65,v69,v70,v74,foo,v77];

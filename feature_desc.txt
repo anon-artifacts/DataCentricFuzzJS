@@ -1,0 +1,198 @@
+| Feature Name                                        | Short Description                                            |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| `uses_bigint_in_reflection`                         | Uses `BigInt` in `Reflect` or similar reflective API         |
+| `iife_based_control_flow`                           | Uses IIFE (Immediately Invoked Function Expression) for flow |
+| `invalid_api_operand_type`                          | Passes unsupported type (e.g., `BigInt`) to built-in APIs    |
+| `recursive_iife_depth`                              | Depth of recursive IIFE nesting                              |
+| `uses_reflection_with_bigint`                       | Combines reflective API with `BigInt` usage                  |
+| `crash_prone_due_to_iife_and_bigint`                | Combines recursive IIFE with `BigInt`, often unstable        |
+| `uses_finalization_registry`                        | Uses `FinalizationRegistry` API                              |
+| `registers_gced_object`                             | Registers object that may be garbage-collected               |
+| `assigns_to_cleanup_token`                          | Assigns or modifies cleanup token in finalization            |
+| `cleanup_token_mutated_after_register`              | Modifies cleanup token after registration                    |
+| `gc_after_mutating_key`                             | Forces GC after mutating registry key                        |
+| `looped_token_mutation`                             | Mutates token repeatedly inside a loop                       |
+| `finalization_registry_cleanup_triggered`           | Triggers registry cleanup behavior                           |
+| `token_used_as_key_then_invalidated`                | Uses object as key then invalidates it                       |
+| `uses_jit_optimization_intrinsics`                  | Uses V8 JIT intrinsics like `%OptimizeFunctionOnNextCall`    |
+| `function_called_with_multiple_type_signatures`     | Calls function with varied input types                       |
+| `parameter_read_after_return`                       | Reads parameters after return (post-execution leak)          |
+| `optimized_function_with_branching_on_input_type`   | Type-based branching inside optimized function               |
+| `returns_param_directly`                            | Directly returns a function parameter                        |
+| `uses_wasm_module_builder`                          | Uses internal Wasm module builder                            |
+| `uses_ref_cast_or_call_ref`                         | Uses Wasm `ref.cast` or `call_ref` instructions              |
+| `webassembly_function_used_as_import`               | Uses Wasm function as a JS import                            |
+| `uses_js_wasm_signature_linking`                    | Uses signature linking between JS and Wasm                   |
+| `calls_exported_wasm_function_with_constant`        | Calls exported Wasm function with constant values            |
+| `enables_jspi_features`                             | Enables JSPI (JavaScript Promise Integration) features       |
+| `manual_wasm_table_usage`                           | Uses Wasm function table manually                            |
+| `uses_global_variable_in_optimized_function`        | Accesses global inside optimized function                    |
+| `loop_nested_switch_on_scalar`                      | Nested switch inside loop on scalar                          |
+| `scalar_assigned_in_switch_case`                    | Assigns scalar values inside switch                          |
+| `no_object_allocation_in_optimized_function`        | Optimized function avoids allocating objects                 |
+| `optimizes_control_flow_only`                       | Optimization focused only on control flow                    |
+| `uses_webassembly_promising`                        | Uses promising-style Wasm features                           |
+| `uses_embedded_wasm_binary`                         | Uses Wasm bytecode directly in buffer                        |
+| `imports_js_function_into_wasm`                     | Imports JS function into Wasm module                         |
+| `calls_promising_export_without_signature_info`     | Calls Wasm exports with missing type info                    |
+| `wasm_exported_function_called_directly`            | Calls Wasm export without wrapping                           |
+| `uses_proxy_on_regex_like_object`                   | Applies `Proxy` to RegExp-like object                        |
+| `wasm_imported_function_is_not_callable`            | Uses non-callable object as Wasm import                      |
+| `wasm_import_used_as_constructor`                   | Uses Wasm import as `new` constructor                        |
+| `calls_wasm_export_twice_with_same_input`           | Reuses same input for Wasm call twice                        |
+| `wraps_wasm_export_with_js_api`                     | Wraps Wasm export in JS wrapper                              |
+| `calls_wrapped_export_directly`                     | Calls JS wrapper of Wasm export                              |
+| `lacks_signature_metadata_for_wrap`                 | Missing signature metadata in wrapper                        |
+| `wraps_export_without_type_check`                   | Wraps Wasm export but skips type check                       |
+| `calls_exported_function_twice`                     | Calls Wasm export twice                                      |
+| `wraps_wasm_export_in_js_function`                  | Wraps Wasm in named JS function                              |
+| `wrapped_export_invoked_as_function`                | Calls wrapped export as a function                           |
+| `wraps_export_without_signature_metadata`           | JS wrapper lacks type info for Wasm                          |
+| `has_wasm`                                          | Contains any Wasm usage                                      |
+| `wasm_bytes_len`                                    | Length of embedded Wasm binary                               |
+| `uses_optimization_directives`                      | Uses `%OptimizeFunction...` or similar                       |
+| `wasm_optimized`                                    | Indicates Wasm was optimized                                 |
+| `num_exported_funcs`                                | Number of exported Wasm functions                            |
+| `builtins_declared_count`                           | Count of built-in functions declared                         |
+| `dynamic_constructor_dispatch`                      | Uses dynamic class instantiation                             |
+| `recursive_generator_or_selfcall`                   | Generator or function calls itself                           |
+| `enum_then_property_mutation`                       | Enumerates then mutates object props                         |
+| `optimized_function_retaining_GC_sensitive_objects` | GC-sensitive objects retained in optimized code              |
+| `side_effecting_getter_triggered_by_builtin`        | Getter with side effect used in built-in                     |
+| `getter_defines_mutation`                           | Getter mutates state                                         |
+| `builtin_operation_on_container`                    | Built-in used on complex containers                          |
+| `uses_eval_or_dynamic_code`                         | Uses `eval`, `new Function`, etc.                            |
+| `recursive_function_self_call`                      | Function directly calls itself                               |
+| `undefined_variable_usage`                          | Uses undeclared variable                                     |
+| `exception_suppressed_code_depth`                   | Deep nesting with try-catch suppressing errors               |
+| `calls_eval_inside_loop_or_recursion`               | Calls `eval` in loop or recursion                            |
+| `flags_indicate_jit_gc_stress`                      | GC/JIT stress flags enabled                                  |
+| `eval_depends_on_runtime_expression`                | `eval` input depends on runtime logic                        |
+| `unbounded_control_flow`                            | Unbounded loops or recursion                                 |
+| `side_effects_protected_by_try`                     | Side effects hidden inside try                               |
+| `mutates_core_runtime_structures`                   | Alters runtime internals (e.g., `Object.prototype`)          |
+| `uses_dynamic_or_undefined_behavior`                | Uses code with undefined behavior                            |
+| `uses_gc_or_jit_stress_flags`                       | GC or JIT flags are active                                   |
+| `mutates_state_under_gc_stress`                     | Mutates state with GC stress on                              |
+| `uses_jit_intrinsics`                               | Uses JIT hints like `%DeoptimizeFunction`                    |
+| `triggers_gc`                                       | Calls `gc()` or triggers GC manually                         |
+| `manipulates_array`                                 | Creates or alters arrays                                     |
+| `uses_try_catch`                                    | Uses try-catch blocks                                        |
+| `uses_worker_or_async`                              | Uses `Worker`, `setTimeout`, etc.                            |
+| `uses_reflection`                                   | Uses `eval`, `Reflect`, or `Proxy`                           |
+| `uses_typed_array`                                  | Uses `Uint8Array`, etc.                                      |
+| `allocates_large_array`                             | Allocates very large array                                   |
+| `has_recursive_call`                                | Recursively calls function                                   |
+| `hot_loop_count`                                    | Loop executed many times                                     |
+| `nested_loop_or_recursion`                          | Nested loops or recursion depth                              |
+| `function_hotness`                                  | Approximate heat of function (e.g., from counters)           |
+| `type_diversion_var`                                | Variable changes types over time                             |
+| `type_diversion_func_args`                          | Function args change types between calls                     |
+| `object_shape_mutation`                             | Object property shapes change                                |
+| `array_bounds_manipulation`                         | Accesses out-of-bounds array                                 |
+| `typedarray_dv_usage`                               | Typed array used with diverging values                       |
+| `gc_stress_pattern`                                 | Matches GC-heavy patterns                                    |
+| `exception_handling`                                | Complex exception use                                        |
+| `use_of_proxy_reflect`                              | Uses both `Proxy` and `Reflect`                              |
+| `use_of_eval_function`                              | Explicit `eval()` used                                       |
+| `api_sort_regex_builtin`                            | Uses `sort` with regex or unsupported operand                |
+| `control_flow_graph_blocks`                         | Number of distinct blocks in flow graph                      |
+| `control_flow_max_nesting`                          | Max nesting depth of control flow                            |
+| `gc_invocations`                                    | Count of forced GC                                           |
+| `gc_timing_pattern`                                 | GC called at sensitive execution point                       |
+| `forced_incremental_gc`                             | Uses `%ScheduleGCIncremental`                                |
+| `allocation_pressure`                               | High allocation frequency                                    |
+| `uses_allow_natives_syntax`                         | Uses internal V8 natives syntax                              |
+| `has_maglev_or_turbofan_opt`                        | Optimized by Maglev or Turbofan                              |
+| `opt_function_with_gc_overlap`                      | GC overlap with optimized functions                          |
+| `circular_reference_detected`                       | Circular object references present                           |
+| `deep_object_assign`                                | Deep object property assignment                              |
+| `assignments_to_young_space_objects`                | Assigns to objects in young GC space                         |
+| `missing_write_barrier_patterns`                    | Assignments lacking write barrier hints                      |
+| `enum_cache_modified_after_optimization`            | Modifies enum cache post-optimization                        |
+| `callback_modifies_object_during_enum_loop`         | Enum callback mutates same object                            |
+| `object_property_growth_rate`                       | Adds many props to object                                    |
+| `loop_count_high_alloc`                             | Loops doing frequent allocation                              |
+| `function_complexity_score`                         | Heuristic score of function complexity                       |
+| `debugprint_call_count`                             | Uses `%DebugPrint` or similar logging                        |
+| `use_of_uncommon_runtime_hooks`                     | Accesses hidden V8 runtime internals                         |
+
+ Basic Runtime Features
+Feature Name	Description
+exit_code	Process exit code (0 for success, <0 for signals like SIGSEGV).
+execution_time_ms	Execution time in milliseconds.
+peak_memory_mb	Peak memory used (MB).
+crash_signal	Signal name if crashed (e.g., SIGSEGV).
+error	Any error messages (e.g., TIMEOUT).
+log_kb	Size of V8 trace log in KB.
+
+🧠 Optimization & Deoptimization
+Feature Name	Description
+opt_attempts	Number of optimization attempts (--trace-opt).
+opt_success	Number of successful optimizations.
+opt_marked	Functions marked for optimization.
+deopt_all	Number of total deoptimizations (--trace-deopt).
+deopt_unique_reasons	Unique deopt reasons seen.
+deopt_ratio	deopt_all / opt_success (0 if no success).
+
+♻️ Garbage Collection
+Feature Name	Description
+gc_minor	Number of minor GCs (Scavenge).
+gc_major	Number of major GCs (Mark-Sweep or Compact).
+
+🔄 Inline Cache (IC) Features (from --log-ic)
+Feature Name	Description
+total_ic_count	Total number of ICs (Inline Caches).
+load_ic_count	ICs for property loads.
+store_ic_count	ICs for property stores.
+megamorphic_ics	ICs in megamorphic state.
+polymorphic_ics	ICs in polymorphic state.
+monomorphic_ics	ICs in monomorphic state.
+prototype_failure_ics	ICs that failed due to prototype mismatches.
+ic_state_transitions	Number of IC state changes.
+ic_slow_stub_count	Number of ICs falling back to slow stub.
+polymorphic_in_optimized_func_count	Polymorphic ICs inside optimized functions.
+ic_triggered_deopts	Deopts that were triggered from ICs.
+
+🗺️ Map & Type Feedback Features (from --log-maps)
+Feature Name	Description
+map_create_count	Number of map-creates logged.
+unique_map_types	Count of distinct object types seen.
+instance_size_max	Max object instance size encountered.
+non_extensible_flag	Count of non-extensible objects.
+max_descriptor_array_size	Max descriptor array size across maps.
+uses_transition_array	Whether any map had transitions.
+stable_map_flag	Whether stable maps were observed.
+has_cycle_in_back_ptrs	Whether a cycle was detected in back pointers.
+back_pointer_is_null	How many maps had a null or undefined back pointer.
+
+🔠 Map Type Buckets
+Feature Name	Description
+bucket_string_count	Number of STRING_TYPE maps.
+bucket_collection_count	Number of collection-type maps (Map, Set, etc.).
+bucket_array_count	Number of array maps.
+bucket_weak_count	WeakRef or similar types.
+bucket_handler_count	Maps involving internal handlers.
+bucket_dictionary_count	Maps backed by dictionary mode.
+bucket_code_count	Code-related types (InstructionStream, etc.).
+bucket_misc_count	Fallback bucket for unknown types.
+bucket_context_count	Context-related maps.
+
+🧬 Elements Kind Buckets
+Feature Name	Description
+elem_kind_holey	Holey elements arrays.
+elem_kind_double	Arrays with double elements.
+elem_kind_typed	Typed arrays (Float32, Uint16, etc.).
+elem_kind_shared	Shared typed arrays (RAB/GSAB).
+elem_kind_slow	Slow or dictionary elements.
+elem_kind_args	Arguments elements kind.
+elem_kind_misc	Miscellaneous or unknown elements kinds.
+
+🏷️ Map Type Flags
+Feature Name	Description
+is_code_type	Whether code types (CODE_TYPE) were observed.
+is_feedback_vector	Whether feedback vector types appeared.
+is_cons_or_thin_string	Thin or cons string maps used.
+is_external_string	External string maps.
+is_symbol_type	Use of SYMBOL_TYPE.
+is_instruction_stream	Instruction stream objects present.

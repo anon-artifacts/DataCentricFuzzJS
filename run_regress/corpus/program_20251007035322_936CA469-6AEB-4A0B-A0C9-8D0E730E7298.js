@@ -1,0 +1,17 @@
+parseInt(1e-07, 10);
+parseInt(-1e-07, 10);
+-1;
+parseInt(9e-08, 10);
+parseInt(-9e-08, 10);
+-9;
+parseInt(1.5e-08, 10);
+parseInt(-1.5e-08, 10);
+-1;
+parseInt(1e-06, 10);
+parseInt(0, 10);
+parseInt(-0, 10);
+parseInt("0", 10);
+parseInt("-0", 10);
+-0;
+parseInt(Math.asin(0), 10);
+parseInt(Math.asin(-0), 10);

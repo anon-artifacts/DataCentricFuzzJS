@@ -1,0 +1,55 @@
+const v2 = new Float32Array(40);
+var f32 = v2;
+function foo(a5, a6) {
+    var v0 = a5[0];
+    var v1 = a5[1];
+    var v2 = a5[2];
+    var v3 = a5[3];
+    var v4 = a5[4];
+    var v5 = a5[5];
+    var v6 = a5[6];
+    var v7 = a5[7];
+    var v8 = a5[8];
+    var v9 = a5[9];
+    var v10 = a5[10];
+    var v11 = a5[11];
+    var v12 = a5[12];
+    var v13 = a5[13];
+    var v14 = a5[14];
+    var v15 = a5[15];
+    var v16 = a5[16];
+    var v17 = a5[17];
+    var v18 = a5[18];
+    var v19 = a5[19];
+    var v20 = a5[20];
+    var v21 = a5[21];
+    var v22 = a5[22];
+    var v23 = a5[23];
+    var v24 = a5[24];
+    var v25 = a5[25];
+    var v26 = a5[26];
+    var v27 = a5[27];
+    var v28 = a5[28];
+    var v29 = a5[29];
+    var v30 = a5[30];
+    var v31 = a5[31];
+    var v32 = a5[32];
+    var v33 = a5[33];
+    var v34 = a5[34];
+    var v35 = a5[35];
+    var v36 = a5[36];
+    var v37 = a5[37];
+    var v38 = a5[38];
+    var v39 = a5[39];
+    a5[0] = v1 - 1;
+    return (((((((((((((((((((((((((((((((((((((((a6 + v0) + v1) + v2) + v3) + v4) + v5) + v6) + v7) + v8) + v9) + v10) + v11) + v12) + v13) + v14) + v15) + v16) + v17) + v18) + v19) + v20) + v21) + v22) + v23) + v24) + v25) + v26) + v27) + v28) + v29) + v30) + v31) + v32) + v33) + v34) + v35) + v36) + v37) + v38) + v39;
+}
+var s = "";
+for (let i132 = 0; i132 < f32.length; i132++) {
+    f32[i132] = i132;
+    s += i132;
+}
+foo(f32, 0);
+foo(f32, 0);
+"x" + s;
+foo(f32, "x");

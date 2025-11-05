@@ -1,0 +1,10 @@
+const v2 = new Array(1);
+var arr = v2;
+var newarr = arr.splice(1, 2);
+var obj = {};
+obj.length = 2;
+obj.splice = Array.prototype.splice;
+const v14 = Array.prototype.splice;
+const t7 = Object.prototype;
+t7.splice = v14;
+print("ok");

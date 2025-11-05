@@ -1,0 +1,12 @@
+const v2 = new Array(4294967295);
+let array = v2;
+let it = array.keys();
+const v8 = { value: 0, done: false };
+it.next();
+it = array.entries();
+const v13 = [0,,];
+const v15 = { value: v13, done: false };
+it.next();
+it = array[Symbol.iterator]();
+const v22 = { value: undefined, done: false };
+it.next();

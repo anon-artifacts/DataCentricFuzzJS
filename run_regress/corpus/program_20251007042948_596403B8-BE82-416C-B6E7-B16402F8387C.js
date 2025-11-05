@@ -1,0 +1,15 @@
+var zero = 0;
+var one = 1;
+var minus_one = -1;
+-Infinity;
+1 / (0 / -1);
+-Infinity;
+one / (zero / minus_one);
+1 / (0 / 1);
+one / (zero / one);
+-Infinity;
+1 / (-1 % 1);
+-Infinity;
+one / (minus_one % one);
+1 / (1 % 1);
+one / (one % one);

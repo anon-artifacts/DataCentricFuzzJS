@@ -1,0 +1,40 @@
+function f0() {
+    var o = { f: 42 };
+    var p = { f: 43 };
+    var result = 0;
+    var n = 1000000;
+    for (let i12 = 0; i12 < n; ++i12) {
+        var a = o.f;
+        var b = o.f;
+        var c = o.f;
+        var d = o.f;
+        if (d) {
+            var e = o.f;
+            var f = o.f;
+            var g = o.f;
+            var h = o.f;
+            if (h) {
+                var j = o.f;
+                var k = o.f;
+                var l = o.f;
+                var m = o.f;
+                if (m) {
+                    var q = o.f;
+                    var r = o.f;
+                    var s = o.f;
+                    var t = o.f;
+                    if (t) {
+                        result += r;
+                    }
+                }
+            }
+        }
+        var tmp = o;
+        o = p;
+        p = tmp;
+    }
+    if (result != (((n / 2) * o.f) + ((n / 2) * p.f))) {
+        throw "Error: bad result: " + result;
+    }
+}
+f0();

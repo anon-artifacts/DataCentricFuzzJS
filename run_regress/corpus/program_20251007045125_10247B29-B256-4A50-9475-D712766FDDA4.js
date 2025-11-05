@@ -1,0 +1,15 @@
+console.log("Test to ensure correct behaviour when using backreferences in a RegExp");
+/(...)\1$/.test("abcabc");
+/(...)\1$/.test("abcdef");
+/(...)\2$/.test("abcabc");
+/(...)\2$/.test("abc");
+/\1(...)$/.test("abcabc");
+/\1(...)$/.test("abcdef");
+/\2(...)$/.test("abcabc");
+/\2(...)$/.test("abc");
+/\1?(...)$/.test("abc");
+/\1?(...)$/.test("abc");
+const v36 = new RegExp("[^b]*((..)|(\2))+Sz", "i");
+re = v36;
+re.test("axabcd");
+re.test("axabcsz");
