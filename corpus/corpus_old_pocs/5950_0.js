@@ -1,5 +1,0 @@
-
-(function () {                                                                     
-    while (!(arguments !== arguments));                                            
-})();
-

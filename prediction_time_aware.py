@@ -75,18 +75,15 @@ def extract_static_dynamic_features(pos_folds, neg_df):
 
     return set(static_features), set(dynamic_features)
 
-def plot_mean_rank_top_features(pos_folds, neg_df, static_features, dynamic_features, top_fraction=0.25, runs=10):
-    """
-    For each fold and run, get feature importance ranks,
-    aggregate mean rank per feature across folds and runs,
-    then plot horizontal bar plot with mean ranks colored by static/dynamic.
-    """
+def plot_mean_rank_top_features(pos_folds, neg_df, static_features, dynamic_features, 
+                                top_fraction=0.25, runs=10, plot_folder=PLOT_FOLDER):
+    os.makedirs(plot_folder, exist_ok=True)
     feature_rank_records = []
+    last_fold_records = []  # ✅ collect dicts, not just feature names
 
     for run_idx in range(runs):
         rs = run_idx
-        for k in range(2, 5):  # folds 2,3,4 as test folds
-            # Prepare train/test sets (like in your run_time_aware_cv_per_fold_feature_ranking)
+        for k in range(2, 5):
             train_pos = pd.concat([pos_folds[i - 1] for i in range(1, k)]).reset_index(drop=True)
             train_neg = neg_df[neg_df['fold'] < k].reset_index(drop=True)
             test_pos = pos_folds[k - 1].reset_index(drop=True)
@@ -94,20 +91,10 @@ def plot_mean_rank_top_features(pos_folds, neg_df, static_features, dynamic_feat
 
             train = pd.concat([train_pos, train_neg])
             test = pd.concat([test_pos, test_neg])
-            train, _ = train_test_split(
-                train,
-                train_size=0.9,
-                random_state=rs,
-                stratify=train['target']
-            )
 
-            # Subsample test to 90%, stratified by 'target'
-            test, _ = train_test_split(
-                test,
-                train_size=0.9,
-                random_state=rs + 1,
-                stratify=test['target']
-            )
+            train, _ = train_test_split(train, train_size=0.9, random_state=rs, stratify=train['target'])
+            test, _ = train_test_split(test, train_size=0.9, random_state=rs + 1, stratify=test['target'])
+
             common_cols = list(set(train.columns) & set(test.columns))
             common_cols = [c for c in common_cols if c not in ('target', 'filename', 'issue_report_date', 'fold')]
 
@@ -122,12 +109,10 @@ def plot_mean_rank_top_features(pos_folds, neg_df, static_features, dynamic_feat
                     else:
                         train[col] = train[col].astype('category').cat.codes
                         test[col] = test[col].astype('category').cat.codes
-            
-            
+
             X_train = train[common_cols].fillna(0)
             y_train = train['target']
-             # Subsample train to 90%, stratified by 'target'
-            
+
             model = XGBClassifier(
                 n_estimators=100,
                 eval_metric='aucpr',
@@ -136,7 +121,6 @@ def plot_mean_rank_top_features(pos_folds, neg_df, static_features, dynamic_feat
             )
             model.fit(X_train, y_train)
 
-            # Feature importances sorted descending
             importance_df = pd.DataFrame({
                 'feature': common_cols,
                 'importance': model.feature_importances_
@@ -145,29 +129,49 @@ def plot_mean_rank_top_features(pos_folds, neg_df, static_features, dynamic_feat
             top_n = max(1, int(len(importance_df) * top_fraction))
             top_feats = importance_df['feature'].iloc[:top_n].tolist()
 
-            # Save ranks (rank = position in top_feats + 1)
+            # Save ranks for all runs/folds
             for rank, feat in enumerate(top_feats, start=1):
-                feature_rank_records.append({
+                record = {
                     'run': run_idx,
                     'fold': k,
                     'feature': feat,
                     'rank': rank,
-                    'feature_type': 'static' if feat in static_features else ('dynamic' if feat in dynamic_features else 'unknown')
-                })
+                    'feature_type': (
+                        'static' if feat in static_features 
+                        else 'dynamic' if feat in dynamic_features 
+                        else 'unknown'
+                    )
+                }
+                feature_rank_records.append(record)
 
+                # ✅ also save last fold data in full structured form
+                if k == 4 and run_idx == runs - 1:
+                    last_fold_records.append(record)
+
+    # === Aggregate mean ranks ===
     rank_df = pd.DataFrame(feature_rank_records)
-
-    # Calculate mean rank per feature across folds and runs
     mean_rank_df = rank_df.groupby(['feature', 'feature_type'])['rank'].mean().reset_index()
     mean_rank_df = mean_rank_df.sort_values('rank')
-
-    # Filter unknown feature types out
     mean_rank_df = mean_rank_df[mean_rank_df['feature_type'] != 'unknown']
-    
     mean_rank_df = mean_rank_df.head(int(len(importance_df) * top_fraction))
-    #save top fractions
-    save_df(mean_rank_df, f"{PLOT_FOLDER}/mean_rank_top_{int(top_fraction*100)}_perc_features.csv")
-    # Plot
+
+    # === Save mean rank top features ===
+    mean_rank_csv = os.path.join(plot_folder, f"mean_rank_top_{int(top_fraction*100)}_perc_features.csv")
+    # mean_rank_df.to_csv(mean_rank_csv, index=False)
+    # print(f"Saved mean rank top features: {mean_rank_csv}")
+
+    # === Save last fold features with same structure ===
+    last_fold_df = pd.DataFrame(last_fold_records)
+    last_fold_df = last_fold_df.groupby(['feature', 'feature_type'])['rank'].mean().reset_index()
+    last_fold_df = last_fold_df.sort_values('rank')
+    last_fold_df = last_fold_df[last_fold_df['feature_type'] != 'unknown']
+    last_fold_df = last_fold_df.head(int(len(importance_df) * top_fraction))
+
+    last_fold_csv = os.path.join(plot_folder, "top_25_percent_features_last_fold.csv")
+    last_fold_df.to_csv(last_fold_csv, index=False)
+    print(f"Saved top 25% features from last fold: {last_fold_csv}")
+
+    # === Plot ===
     plt.figure(figsize=(12, max(6, 0.15 * len(mean_rank_df))))
     sns.barplot(
         data=mean_rank_df,
@@ -182,21 +186,9 @@ def plot_mean_rank_top_features(pos_folds, neg_df, static_features, dynamic_feat
     plt.title(f'Mean Rank of Top {int(top_fraction*100)}% Features Across Folds and Runs')
     plt.legend(title='Feature Type')
     plt.tight_layout()
-    filename = os.path.join(PLOT_FOLDER, f"mean_rank_static_dynamic_top_10.png")
-    plt.savefig(filename, dpi=300)
-    print(f" Saved plot: {filename}")
-    plt.show()
-    
-def load_top_features(feature_importance_path, top_fraction=0.1):
-    fi_df = pd.read_csv(feature_importance_path)
-    fi_df = fi_df.sort_values(by='importance', ascending=False)
-    top_n = max(1, int(len(fi_df) * top_fraction))
-    top_features = fi_df['feature'].iloc[:top_n].tolist()
-    print(f"Top {top_n} features based on importance:")
-    for feature in top_features:
-        print(feature)
-    print(f"Selected top {top_fraction*100:.0f}% features ({top_n} features) from feature importance file.")
-    return top_features
+    # plt.savefig(os.path.join(plot_folder, f"mean_rank_static_dynamic_top_{int(top_fraction*100)}.png"), dpi=300)
+    # plt.show()
+
 
 def run_time_aware_cv(pos_folds, neg_df, selected_features=None, random_state=None):
     results = []
@@ -421,7 +413,6 @@ def plot_metrics_with_variance(results_all_runs):
     plt.minorticks_on()
     plt.tight_layout()
     plt.savefig("time_aware_cv_plot_variance_better_adjusted_bck.png")
-    plt.show()
     
 def plot_metrics(df):
     plt.figure(figsize=(10, 6))
@@ -436,7 +427,6 @@ def plot_metrics(df):
     plt.legend()
     plt.tight_layout()
     plt.savefig("time_aware_cv_plot.png")
-    plt.show()
 
 def get_top_fractions(results_all_runs, top_fraction):
     all_df = pd.concat(
@@ -450,7 +440,7 @@ def get_top_fractions(results_all_runs, top_fraction):
 
 def save_df(df, filename):
     df.to_csv(filename, index=False)
-    print(f" Saved DataFrame to {filename}")
+    print(f"Saved DataFrame to {filename}")
         
 def plot_combined_metrics_single_fraction(results_all_runs, top_fraction):
     all_df = get_top_fractions(results_all_runs, top_fraction)
@@ -601,7 +591,6 @@ def plot_combined_metrics(results_all_runs, top_fractions):
             os.makedirs(PLOT_FOLDER)
 
         plt.savefig(os.path.join(PLOT_FOLDER, f"combined_{metric}.png"))
-        plt.show()
 
 def aggregate_by_fraction(results_all_runs, metric="precision"):
     all_df = pd.concat(results_all_runs, keys=range(len(results_all_runs)), names=['run', 'index']).reset_index(level='run')
@@ -615,6 +604,7 @@ def find_diminishing_point(agg_df, improvement_threshold=0.005):
         if agg_df.loc[i, "gain"] < improvement_threshold:
             return agg_df.loc[i, "top_fraction"], agg_df
     return None, agg_df
+
 def plot_diminishing_returns(results_all_runs, metric="precision", improvement_threshold=0.005):
     agg_df = aggregate_by_fraction(results_all_runs, metric=metric)
     frac_point, agg_df = find_diminishing_point(agg_df, improvement_threshold)
@@ -644,9 +634,9 @@ def plot_diminishing_returns(results_all_runs, metric="precision", improvement_t
     filename = os.path.join(PLOT_FOLDER, f"diminishing_returns_{metric}.png")
     plt.savefig(filename, dpi=300)
     print(f" Saved plot: {filename}")
-    plt.show()
     
     return frac_point, agg_df
+
 def find_statistically_minimal_fraction(results_all_runs, metric="precision", alpha=0.05, test="wilcoxon", effect_size_threshold=0.01):
     import numpy as np
     from scipy.stats import ttest_rel, wilcoxon
@@ -757,14 +747,14 @@ if __name__ == "__main__":
     "features_static_neg.csv", "features_dynamic_neg.csv"
     )
    
-    # plot_mean_rank_top_features(
-    #     pos_folds,
-    #     neg_df,
-    #     static_features_set,
-    #     dynamic_features_set,
-    #     top_fraction=0.25,
-    #     runs=10
-    # )
+    plot_mean_rank_top_features(
+        pos_folds,
+        neg_df,
+        static_features_set,
+        dynamic_features_set,
+        top_fraction=0.25,
+        runs=10
+    )
 
     for frac in top_fractions:
         print(f"\n=== Processing top_fraction={frac} ===")

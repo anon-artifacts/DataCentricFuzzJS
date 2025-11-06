@@ -1,4 +1,0 @@
-/*
-Source: 
-*/
-(this + !this)

@@ -1,3 +1,0 @@
-evaluate("", {
-  fileName: null
-});

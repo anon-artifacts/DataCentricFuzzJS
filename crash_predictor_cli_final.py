@@ -156,7 +156,7 @@ def main():
     )
     predict_parser.add_argument("--flags", type=str, help="Optional flags as a string")
     PLOT_FOLDER = "plot_timed_fractions"
-    selected_features_csv = pd.read_csv(f"{PLOT_FOLDER}/mean_rank_top_25_perc_features.csv")
+    selected_features_csv = pd.read_csv(f"{PLOT_FOLDER}/top_25_percent_features_last_fold.csv")
     selected = selected_features_csv["feature"].tolist()
     args = parser.parse_args()
     

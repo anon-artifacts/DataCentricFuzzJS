@@ -122,8 +122,6 @@ public class FuzzEngine: ComponentBase {
                         added = retained
                         print(retained)
                         if retained{
-                        //var fuzzEngineParams: FuzzEngineParams = FuzzEngineParams()
-                        //fuzzEngineParams.executionOutcome = outcome
                             fuzzer.dispatchEvent(fuzzer.events.InterestingProgramFound, data: (program, .local))
                             program.contributors.generatedInterestingSample()
                         }

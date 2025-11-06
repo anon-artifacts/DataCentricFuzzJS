@@ -1,4 +1,0 @@
-
-
-Output: `log(clas`
-

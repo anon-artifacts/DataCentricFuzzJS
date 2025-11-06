@@ -526,15 +526,12 @@ let v8Profile = Profile(
             "--fuzzing",
             "--jit-fuzzing",
             "--future",
-            "--maglev",
             "--harmony",
             "--js-staging",
             "--wasm-staging",
             "--wasm-fast-api",
             "--expose-fast-api",
             "--experimental-wasm-memory64"
-            //"--trace-opt",
-            //"--trace-deopt"
         ]
 
         guard randomize else { return args }
@@ -683,7 +680,7 @@ let v8Profile = Profile(
     },
 
     // We typically fuzz without any sanitizer instrumentation, but if any sanitizers are active, "abort_on_error=1" must probably be set so that sanitizer errors can be detected.
-    processEnv: [:],
+    processEnv: ["ASAN_OPTIONS": "abort_on_error=1"],
 
     maxExecsBeforeRespawn: 1000,
 
