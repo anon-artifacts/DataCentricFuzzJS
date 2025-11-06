@@ -41,7 +41,7 @@ sudo npm install -g jsvu
 jsvu v8@14.1.146
 ```
 
-### 3. (Optional) Build V8 from Source with Fuzzing Flags
+### 3. Build V8 from Source with Fuzzing Flags
 
 To run the full fuzzer (RQ5) and reproduce the instrumented build, you must compile V8 from source using `depot_tools` with specific build flags (e.g., ASAN, coverage).
 
