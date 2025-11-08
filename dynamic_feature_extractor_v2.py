@@ -231,13 +231,6 @@ def run_single_poc(js_file: str, flags: List[str], v8_path: str = "/home/kgangul
         if stdout:
             if len(stdout) > 5_000_000:
                 stdout = stdout[:5_000_000]  # truncate if massive
-             # 🔽 ADD THIS SNIPPET
-            
-            #log_dir = pathlib.Path("logs_positives_foldx")
-            #log_dir.mkdir(exist_ok=True)
-            #log_path = log_dir / f"{pathlib.Path(js_file).stem}.log"
-            #with open(log_path, "w", encoding="utf-8") as log_fh:
-            #    log_fh.write(stdout)
             features.update(parse_v8_log(stdout))
 
     except Exception as e:
@@ -292,10 +285,6 @@ def process_poc_folder(pocs_folder_path: str,
 
     print(f"▶ processing {len(all_files)} JS files …")
 
-    # run first file to learn field order
-    #first_feats = run_single_poc(os.path.join(pocs_folder_path, all_files[0]))
-    #header = ["filename", *first_feats.keys(), "target"]
-    #header = list(dict.fromkeys(header))  # dedupe in case 'filename' already present
 
     with open(output_csv_path, "w", newline="", encoding="utf-8") as csv_fh:
         writer = csv.DictWriter(csv_fh, fieldnames=HEADER)

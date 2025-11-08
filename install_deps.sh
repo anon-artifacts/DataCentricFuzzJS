@@ -6,7 +6,6 @@ sudo apt-get update
 sudo apt-get -y install libz3-dev python3 python3-lldb-13 ninja-build xz-utils pkg-config curl git
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && \
 sudo apt-get install -y nodejs
-python3.13 -m pip install --upgrade joblib loky
 
 # Install Swiftly
 curl -O https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz
@@ -14,10 +13,15 @@ tar zxf swiftly-$(uname -m).tar.gz
 ./swiftly init --quiet-shell-followup
 . "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
 hash -r
-
+# Persist Swiftly path for future shells
+SWIFTLY_ENV="${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
+if [ -f "$SWIFTLY_ENV" ]; then
+    echo ". \"$SWIFTLY_ENV\"" >> "$HOME/.bashrc"
+fi
 # Swift toolchain
 swiftly install 6.1.2
 swiftly use 6.1.2
+
 
 # Python 3.13
 sudo add-apt-repository -y ppa:deadsnakes/ppa

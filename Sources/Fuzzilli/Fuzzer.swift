@@ -656,35 +656,7 @@ public class Fuzzer {
                 }
                 assert(!program.code.contains(where: { $0.op is JsInternalOperation }))
                 dispatchEvent(events.InterestingProgramFound, data: (program, origin))
-                /*
-                let programID = program.id.uuidString  // String
-
-                let outputFileURL = URL(fileURLWithPath: "aspects.txt")
-                let line = "\(programID),\(aspects)\n"
-                let fileManager = FileManager.default
-
-                if let data = line.data(using: .utf8) {
-                    if fileManager.fileExists(atPath: outputFileURL.path) {
-                        do {
-                            let fileHandle = try FileHandle(forWritingTo: outputFileURL)
-                            defer { fileHandle.closeFile() }
-                            fileHandle.seekToEndOfFile()
-                            fileHandle.write(data)
-                        } catch {
-                            print("Failed to append to file: \(error)")
-                        }
-                    } else {
-                        do {
-                            try data.write(to: outputFileURL)
-                        } catch {
-                            print("Failed to create file: \(error)")
-                        }
-                    }
-                } else {
-                    print("Failed to encode string to UTF-8")
-                }
-                                dispatchEvent(events.InterestingProgramFound, data: (program, origin))
-                */
+               
                 // If we're running in static corpus mode, we only add programs to our corpus during corpus import.
                 if !config.staticCorpus || origin.isFromCorpusImport() {
                     corpus.add(program, aspects)

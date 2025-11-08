@@ -1,0 +1,7 @@
+## Modifications from Fuzzilli
+
+This repository includes the following changes to the original Fuzzilli fuzzer:
+
+- Added feature-guided fuzzing integration using dynamic and static features.
+- Extended MutationEngine and dependent files to incorporate Python service calls.
+- Refactorings to centralize some constants in MutatorSettings

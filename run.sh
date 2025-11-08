@@ -18,6 +18,13 @@ fi
 # Create main and subdirectories
 mkdir -p run/corpus run/crashes/duplicates run/stats
 
+# If run/old_corpus exists, move it to run/corpus
+if [ -d "run/old_corpus" ]; then
+    echo "📦 Found 'run/old_corpus'. Moving it to 'run/corpus'..."
+    rm -rf run/corpus  # Remove existing corpus folder if needed
+    mv run/old_corpus run/corpus
+fi
+
 # Create settings.json file
 cat > run/settings.json << 'EOF'
 {

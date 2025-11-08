@@ -102,7 +102,7 @@ The following scripts reproduce the key Research Questions (RQs) from the paper.
 To evaluate the predictive performance (precision, recall, false alarm) of the guidance model using the time-aware cross-validation setup, run:
 
 ```bash
-python prediction_time_aware.py
+python3.13 prediction_time_aware.py
 ```
 
 This script also provides the data for analyzing the minimal feature set (RQ4).
@@ -112,7 +112,7 @@ This script also provides the data for analyzing the minimal feature set (RQ4).
 To run the ablation study that compares the performance of the static-only, dynamic-only, and combined feature models, run:
 
 ```bash
-python prediction_compare_time_aware.py > compare.txt
+python3.13 prediction_compare_time_aware.py > compare.txt
 ```
 
 ### RQ5 (Feature-Guided Fuzzing)
@@ -137,12 +137,12 @@ These services provide the model's predictions to the fuzzer in real-time. **Run
 
 ```bash
 # Terminal 1: SHAP service for feature importance
-python predict_minimal_shap.py
+python3.13 predict_minimal_shap.py
 ```
 
 ```bash
 # Terminal 2: Main crash prediction service
-python crash_prediction_service.py
+python3.13 crash_predictor_service.py
 ```
 
 **3. Run the Fuzzer**
@@ -150,10 +150,20 @@ python crash_prediction_service.py
 With both services running, you can launch the fuzzer:
 
 ```bash
-./run.sh
+./run.sh loaded_corpus
 ```
 
 The fuzzer will now communicate with the services to score and prioritize seeds based on their predicted risk.
+
+## License and Attribution
+
+This project includes modifications to [Fuzzilli](https://github.com/googleprojectzero/fuzzilli), 
+which is licensed under the Apache License 2.0. 
+
+All modifications in this repository © 2025 Kishan Kumar Ganguly. 
+This repository remains licensed under the Apache License 2.0. 
+See the original LICENSE file for details.
+
 
 ## 📜 Citation
 
