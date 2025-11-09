@@ -100,7 +100,6 @@ public class Storage: Module {
             self.storeProgram(ev.program, as: filename, in: self.corpusDir)
         }
 
-
         if fuzzer.config.enableDiagnostics {
             fuzzer.registerEventListener(for: fuzzer.events.DiagnosticsEvent) { ev in
                 let filename = "\(self.formatDate())_\(ev.name)_\(String(currentMillis()))"
@@ -145,7 +144,7 @@ public class Storage: Module {
         }
     }
 
-    private func storeProgram(_ program: Program, as filename: String, in directory: String) {
+    func storeProgram(_ program: Program, as filename: String, in directory: String) {
         // Always include comments when writing programs to disk
         let options = LiftingOptions.includeComments
 
@@ -206,9 +205,5 @@ public class Storage: Module {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMddHHmmss"
         return formatter.string(from: Date())
-    }
-
-    public var corpusPath: String {
-        return corpusDir
     }
 }

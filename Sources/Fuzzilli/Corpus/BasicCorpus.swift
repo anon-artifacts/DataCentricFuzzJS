@@ -91,68 +91,13 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
 
     /// Returns a random program from this corpus for use in splicing to another program
     public func randomElementForSplicing() -> Program {
-        // Dump all program IDs
-    
+        assert(programs.count > 0)
         let idx = Int.random(in: 0..<programs.count)
         let program = programs[idx]
         assert(!program.isEmpty)
         return program
     }
-    /*
-    /// Returns a random program from this corpus and increases its age by one.
-    public func randomElementForMutating() -> Program {
-        //let idx = Int.random(in: 0..<programs.count)
-        //ages[idx] += 1
-        //let program = programs[idx]
-        
-        //assert(!program.isEmpty)
 
-        //return program
-        let selectionProbability = 0.8 // 30% crash-predictor guided, 70% random fallback
-
-        // ⚠️ Only do crash-guided selection some of the time
-        if Double.random(in: 0..<1) < selectionProbability {
-            let candidates = (0..<programs.count).shuffled().prefix(Swift.min(100, programs.count))
-            var idMap = [String: Int]()
-            let ids = candidates.map { i in idMap[programs[i].id.uuidString] = i; return programs[i].id.uuidString }
-            //let corpusDir = fuzzer.storage.corpusDir
-            if let storage = Storage.instance(for: fuzzer) {
-                let task = Process()
-                let pipe = Pipe()
-                task.standardOutput = pipe
-                task.executableURL = URL(fileURLWithPath: "/usr/bin/python3.13")
-                task.arguments = ["live_crash_prediction_cli.py",
-                                "--corpus_dir", storage.corpusPath,
-                                "--program_ids", ids.joined(separator: ",")]
-
-                do {
-                    try task.run()
-                    let out = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-                    let pattern = #"'([^']+)'"#
-                    if let match = out.range(of: pattern, options: .regularExpression) {
-                        let selectedID = String(out[match]).trimmingCharacters(in: CharacterSet(charactersIn: "'"))
-                        if let i = idMap[selectedID] {
-                            ages[i] += 1
-                            let p = programs[i]
-                            assert(!p.isEmpty)
-                            return p
-                        }
-                        else {
-                            print("❌ ID \(selectedID) not found")
-                        }
-                    }
-                } catch {
-                    logger.error("⚠️ Roulette selection failed: \(error)")
-                }
-            }
-        }
-        let fallback = Int.random(in: 0..<programs.count)
-        ages[fallback] += 1
-        let p = programs[fallback]
-        assert(!p.isEmpty)
-        return p
-    }
-    */
     /// Returns a random program from this corpus and increases its age by one.
     public func randomElementForMutating() -> Program {
         let idx = Int.random(in: 0..<programs.count)
@@ -162,7 +107,6 @@ public class BasicCorpus: ComponentBase, Collection, Corpus {
         return program
     }
 
-    
     public func allPrograms() -> [Program] {
         return Array(programs)
     }

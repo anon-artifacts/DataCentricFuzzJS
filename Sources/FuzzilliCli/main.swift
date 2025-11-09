@@ -14,13 +14,10 @@
 
 import Foundation
 import Fuzzilli
+
 //
 // Process commandline arguments.
 //
-// PythonLibrary.useVersion(3, 13)
-// let sys = Python.import("sys")
-// sys.path.append("/home/kkganguly/ALFuzz")
-
 let args = Arguments.parse(from: CommandLine.arguments)
 
 if args["-h"] != nil || args["--help"] != nil || args.numPositionalArguments != 1 {
@@ -101,6 +98,7 @@ Options:
     --tag=tag                    : Optional string tag associated with this instance which will be stored in the settings.json file as well as in crashing samples.
                                    This can for example be used to remember the target revision that is being fuzzed.
     --wasm                       : Enable Wasm CodeGenerators (see WasmCodeGenerators.swift).
+    --forDifferentialFuzzing     : Enable additional features for better support of external differential fuzzing.
 
 """)
     exit(0)
@@ -158,6 +156,7 @@ let argumentRandomization = args.has("--argumentRandomization")
 let additionalArguments = args["--additionalArguments"] ?? ""
 let tag = args["--tag"]
 let enableWasm = args.has("--wasm")
+let forDifferentialFuzzing = args.has("--forDifferentialFuzzing")
 
 guard numJobs >= 1 else {
     configError("Must have at least 1 job")
@@ -313,7 +312,7 @@ if swarmTesting {
     logger.info("Weight | CodeGenerator")
 }
 
-let disabledGenerators = Set(profile.disabledCodeGenerators)
+let disableCodeGenerators = Set(profile.disabledCodeGenerators)
 let additionalCodeGenerators = profile.additionalCodeGenerators
 
 let codeGeneratorsToUse = if enableWasm {
@@ -325,14 +324,14 @@ let codeGeneratorsToUse = if enableWasm {
 
 let standardCodeGenerators: [(CodeGenerator, Int)] = codeGeneratorsToUse.map {
     guard let weight = codeGeneratorWeights[$0.name] else {
-        logger.fatal("Missing weight for code generator \($0.name) in CodeGeneratorWeights.swift")
+        logger.fatal("Missing weight for CodeGenerator \($0.name) in CodeGeneratorWeights.swift")
     }
     return ($0, weight)
 }
 var codeGenerators: WeightedList<CodeGenerator> = WeightedList<CodeGenerator>([])
 
 for (generator, var weight) in (additionalCodeGenerators + standardCodeGenerators) {
-    if disabledGenerators.contains(generator.name) {
+    if disableCodeGenerators.contains(generator.name) {
         continue
     }
 
@@ -366,40 +365,6 @@ func loadCorpus(from dirPath: String) -> [Program] {
             if !program.isEmpty {
                 programs.append(program)
             }
-            /*
-            let programID = program.id.uuidString   // your Program's UUID string
-            let filePath = path             // the file path string
-            // Function to check if filePath ends with _neg before extension
-            func hasNegSuffix(beforeExtension path: String) -> Bool {
-                let url = URL(fileURLWithPath: path)
-                let filename = url.deletingPathExtension().lastPathComponent
-                return filename.hasSuffix("_neg")
-            }
-
-            if hasNegSuffix(beforeExtension: filePath) {
-                let outputFileURL = URL(fileURLWithPath: "matched_programs.txt")
-                let fileManager = FileManager.default
-
-                let line: String = "\(programID),\(filePath)\n"
-                if let data = line.data(using: .utf8) {
-                    if fileManager.fileExists(atPath: outputFileURL.path) {
-                        do {
-                            let fileHandle = try FileHandle(forWritingTo: outputFileURL)
-                            defer { fileHandle.closeFile() }
-                            fileHandle.seekToEndOfFile()
-                            fileHandle.write(data)
-                        } catch {
-                            print("Failed to append to file: \(error)")
-                        }
-                    } else {
-                        do {
-                            try data.write(to: outputFileURL)
-                        } catch {
-                            print("Failed to create file: \(error)")
-                        }
-                    }
-                }
-            }*/
         } catch {
             logger.error("Failed to load program \(path): \(error). Skipping")
         }
@@ -422,15 +387,15 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     let disabledMutators = Set(profile.disabledMutators)
     var mutators = WeightedList([
         (ExplorationMutator(),                 3),
-        (CodeGenMutator(),                     3),
-        (SpliceMutator(),                      3),
+        (CodeGenMutator(),                     2),
+        (SpliceMutator(),                      2),
         (ProbingMutator(),                     2),
-        (CombineMutator(),                     2),
-        (InputMutator(typeAwareness: .loose),  1),
+        (InputMutator(typeAwareness: .loose),  2),
         (InputMutator(typeAwareness: .aware),  1),
         // Can be enabled for experimental use, ConcatMutator is a limited version of CombineMutator
         // (ConcatMutator(),                   1),
-        (OperationMutator(),                   1)
+        (OperationMutator(),                   1),
+        (CombineMutator(),                     1),
         // Include this once it does more than just remove unneeded try-catch
         // (FixupMutator()),                   1),
     ])
@@ -477,13 +442,6 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
     // Program templates to use.
     var programTemplates = profile.additionalProgramTemplates
 
-    // Filter out ProgramTemplates that will use Wasm if we have not enabled it.
-    if !enableWasm {
-        programTemplates = programTemplates.filter {
-            !($0 is WasmProgramTemplate)
-        }
-    }
-
     for template in ProgramTemplates {
         guard let weight = programTemplateWeights[template.name] else {
             print("Missing weight for program template \(template.name) in ProgramTemplateWeights.swift")
@@ -493,20 +451,31 @@ func makeFuzzer(with configuration: Configuration) -> Fuzzer {
         programTemplates.append(template, withWeight: weight)
     }
 
+    // Filter out ProgramTemplates that will use Wasm if we have not enabled it.
+    if !enableWasm {
+        programTemplates = programTemplates.filter {
+            !($0 is WasmProgramTemplate)
+        }
+    }
+
     // The environment containing available builtins, property names, and method names.
-    let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: profile.additionalObjectGroups)
+    let environment = JavaScriptEnvironment(additionalBuiltins: profile.additionalBuiltins, additionalObjectGroups: profile.additionalObjectGroups, additionalEnumerations: profile.additionalEnumerations)
     if !profile.additionalBuiltins.isEmpty {
         logger.verbose("Loaded additional builtins from profile: \(profile.additionalBuiltins.map { $0.key })")
     }
     if !profile.additionalObjectGroups.isEmpty {
         logger.verbose("Loaded additional ObjectGroups from profile: \(profile.additionalObjectGroups.map { $0.name })")
     }
+    if !profile.additionalEnumerations.isEmpty {
+        logger.verbose("Loaded additional Enumerations from profile: \(profile.additionalEnumerations.map { $0.group! })")
+    }
 
     // A lifter to translate FuzzIL programs to JavaScript.
     let lifter = JavaScriptLifter(prefix: profile.codePrefix,
                                   suffix: profile.codeSuffix,
                                   ecmaVersion: profile.ecmaVersion,
-                                  environment: environment)
+                                  environment: environment,
+                                  alwaysEmitVariables: configuration.forDifferentialFuzzing)
 
     // The evaluator to score produced samples.
     let evaluator = ProgramCoverageEvaluator(runner: runner)
@@ -548,7 +517,9 @@ let mainConfig = Configuration(arguments: CommandLine.arguments,
                                enableDiagnostics: diagnostics,
                                enableInspection: inspect,
                                staticCorpus: staticCorpus,
-                               tag: tag)
+                               tag: tag,
+                               isWasmEnabled: enableWasm,
+                               storagePath: storagePath)
 
 let fuzzer = makeFuzzer(with: mainConfig)
 
@@ -586,7 +557,11 @@ fuzzer.sync {
                 logger.info("You can recover the old corpus by moving it to \(path + "/corpus").")
             }
         }
-        exit(reason.toExitCode())
+        let code = reason.toExitCode()
+        if (code != 0) {
+            print("Aborting execution after a fatal error.")
+        }
+        exit(code)
     }
 
     // Store samples to disk if requested.
@@ -681,7 +656,9 @@ let workerConfig = Configuration(arguments: CommandLine.arguments,
                                  enableDiagnostics: false,
                                  enableInspection: inspect,
                                  staticCorpus: staticCorpus,
-                                 tag: tag)
+                                 tag: tag,
+                                 isWasmEnabled: enableWasm,
+                                 storagePath: storagePath)
 
 for _ in 1..<numJobs {
     let worker = makeFuzzer(with: workerConfig)

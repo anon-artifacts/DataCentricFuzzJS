@@ -58,17 +58,17 @@ fileprivate let HardenGenerator = CodeGenerator("HardenGenerator", inputs: .requ
     b.callFunction(harden, withArgs: [obj])
 }
 
-fileprivate let ModuleSourceGenerator = RecursiveCodeGenerator("ModuleSourceGenerator") { b in
+fileprivate let ModuleSourceGenerator = CodeGenerator("ModuleSourceGenerator") { b in
     let moduleSourceConstructor = b.createNamedVariable(forBuiltin: "ModuleSource")
 
     let code = b.buildCodeString() {
-        b.buildRecursive()
+        b.build(n: 5)
     }
 
     b.construct(moduleSourceConstructor, withArgs: [code])
 }
 
-fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenerator") { b in
+fileprivate let CompartmentGenerator = CodeGenerator("CompartmentGenerator") { b in
     let compartmentConstructor = b.createNamedVariable(forBuiltin: "Compartment")
 
     var endowments = [String: Variable]()        // may be used as endowments argument or globalLexicals
@@ -77,24 +77,24 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
 
     for _ in 0..<Int.random(in: 1...4) {
         let propertyName = b.randomCustomPropertyName()
-        endowments[propertyName] = b.randomVariable()
+        endowments[propertyName] = b.randomJsVariable()
     }
     var endowmentsObject = b.createObject(with: endowments)
 
 	// to do: populate moduleMap
     let moduleMapObject = b.createObject(with: moduleMap)
     let resolveHook = b.buildPlainFunction(with: .parameters(n: 2)) { _ in
-        b.buildRecursive(block: 1, of: 4)
-        b.doReturn(b.randomVariable())
+        b.build(n: 5)
+        b.doReturn(b.randomJsVariable())
     }
     let moduleMapHook = b.buildPlainFunction(with: .parameters(n: 1)) { _ in
-        b.buildRecursive(block: 2, of: 4)
-        b.doReturn(b.randomVariable())
+        b.build(n: 5)
+        b.doReturn(b.randomJsVariable())
     }
     let loadNowHook = b.dup(moduleMapHook)
     let loadHook = b.buildAsyncFunction(with: .parameters(n: 1)) { _ in
-        b.buildRecursive(block: 3, of: 4)
-        b.doReturn(b.randomVariable())
+        b.build(n: 5)
+        b.doReturn(b.randomJsVariable())
     }
     options["resolveHook"] = resolveHook
     options["moduleMapHook"] = moduleMapHook
@@ -103,7 +103,7 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
 
     if probability(0.5) {
         options["globalLexicals"] = endowmentsObject
-        endowmentsObject = b.createObject(with: [:]) 
+        endowmentsObject = b.createObject(with: [:])
     }
     let optionsObject = b.createObject(with: options)
 
@@ -111,7 +111,7 @@ fileprivate let CompartmentGenerator = RecursiveCodeGenerator("CompartmentGenera
 
     if probability(0.5) {
         let code = b.buildCodeString() {
-            b.buildRecursive(block: 4, of: 4)
+            b.build(n: 5)
         }
         b.callMethod("evaluate", on: compartment, withArgs: [code])
     }
@@ -129,102 +129,9 @@ fileprivate let UnicodeStringGenerator = CodeGenerator("UnicodeStringGenerator")
     b.loadString(s)
 }
 
-fileprivate let HexGenerator = CodeGenerator("HexGenerator") { b in
-    let hexValues = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "A", "B", "C", "D", "E", "F"]
-
-    let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
-
-    withEqualProbability({
-            var s = ""
-            for _ in 0..<Int.random(in: 1...10) {
-                s += chooseUniform(from: hexValues)
-                s += chooseUniform(from: hexValues)
-            }
-            let hex = b.loadString(s)
-
-            if probability(0.5) {
-                b.callMethod("fromHex", on: Uint8Array, withArgs: [hex])
-            } else {
-                let target = b.construct(Uint8Array, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
-                b.callMethod("setFromHex", on: target, withArgs: [hex])
-            }
-        }, {
-            var values = [Variable]()
-            for _ in 0..<Int.random(in: 1...20) {
-                values.append(b.loadInt(Int64.random(in: 0...0xFF)))
-            }
-
-            let bytes = b.callMethod("of", on: Uint8Array, withArgs: values)
-            b.callMethod("toHex", on: bytes, withArgs: [])
-        }
-    )
-}
-
-fileprivate let Base64Generator = CodeGenerator("Base64Generator") { b in
-    let base64Alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "/"]
-    let base64URLAlphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "_"]
-
-    let Uint8Array = b.createNamedVariable(forBuiltin: "Uint8Array")
-
-    withEqualProbability({
-            var options = [String: Variable]()
-            var alphabet = chooseUniform(from: [base64Alphabet, base64URLAlphabet])
-
-            options["alphabet"] = b.loadString((alphabet == base64Alphabet) ? "base64" : "base64url")
-            options["lastChunkHandling"] = b.loadString(
-                chooseUniform(
-                    from: ["loose", "strict", "stop-before-partial"]
-                )
-            )
-
-            var s = ""
-            for _ in 0..<Int.random(in: 1...32) * 4 {
-                s += chooseUniform(from: alphabet)
-            }
-
-            // extend by 0, 1, or 2 bytes
-            switch (Int.random(in: 0...3)) {
-                case 1:
-                    s += base64Alphabet[Int.random(in: 0...63)]
-                    s += base64Alphabet[Int.random(in: 0...63) & 0x30]
-                    s += "=="
-                    break
-
-                case 2:
-                    s += base64Alphabet[Int.random(in: 0...63)]
-                    s += base64Alphabet[Int.random(in: 0...63)]
-                    s += base64Alphabet[Int.random(in: 0...63) & 0x3C]
-                    s += "="
-                    break
-
-                default:
-                    break
-            }
-
-            let base64 = b.loadString(s)
-
-            let optionsObject = b.createObject(with: options)
-            if probability(0.5) {
-                b.callMethod("fromBase64", on: Uint8Array, withArgs: [base64, optionsObject])
-            } else {
-                let target = b.construct(Uint8Array, withArgs: [b.loadInt(Int64.random(in: 0...0x100))])
-                b.callMethod("setFromBase64", on: target, withArgs: [base64, optionsObject])
-            }
-        }, {
-            var values = [Variable]()
-            for _ in 0..<Int.random(in: 1...64) {
-                values.append(b.loadInt(Int64.random(in: 0...0xFF)))
-            }
-
-            let bytes = b.callMethod("of", on: Uint8Array, withArgs: values)
-            b.callMethod("toBase64", on: bytes, withArgs: [])
-        }
-    )
-}
-
 fileprivate let CompartmentEvaluateGenerator = CodeGenerator("CompartmentEvaluateGenerator", inputs: .required(.object(ofGroup: "Compartment"))) { b, target in
     let code = b.buildCodeString() {
-        b.buildRecursive()
+        b.build(n: 5)
     }
     b.callMethod("evaluate", on: target, withArgs: [code])
 }
@@ -342,9 +249,9 @@ let jsCompartments = ObjectGroup(
     ],
     methods: [  //@@ import/importNow can accept more than strings
         "import"    : [.string] => .jsPromise,
-        "importNow" : [.string] => .anything,
+        "importNow" : [.string] => .jsAnything,
         // "module"    : [.opt(.string)] => .object(), (currently unavailable)
-        "evaluate"  : [.string] => .anything,
+        "evaluate"  : [.string] => .jsAnything,
     ]
 )
 
@@ -362,8 +269,8 @@ let jsModuleSources = ObjectGroup(
     name: "ModuleSource",
     instanceType: .jsModuleSource,
     properties: [
-        "bindings" : .object(), 
-        "needsImport" : .object(), 
+        "bindings" : .object(),
+        "needsImport" : .object(),
         "needsImportMeta" : .object(),
     ],
     methods: [:]
@@ -419,8 +326,6 @@ let xsProfile = Profile(
         (CompartmentEvaluateGenerator,  5),
         (UnicodeStringGenerator,        2),
         (ModuleSourceGenerator,         3),
-        (HexGenerator,                  2),
-        (Base64Generator,               2),
     ],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([
@@ -441,11 +346,13 @@ let xsProfile = Profile(
         "ModuleSource"        : .function([.opt(.string)] => .jsModuleSourceConstructor),
         "harden"              : .function([.object()] => .object()),
         "lockdown"            : .function([] => .undefined) ,
-        "petrify"             : .function([.anything] => .anything),
+        "petrify"             : .function([.jsAnything] => .jsAnything),
         "mutabilities"        : .function([.object()] => .object())
     ],
 
     additionalObjectGroups: [jsCompartments, jsCompartmentConstructor, jsModuleSources, jsModuleSourceConstructor],
+
+    additionalEnumerations: [],
 
     optionalPostProcessor: nil
 )

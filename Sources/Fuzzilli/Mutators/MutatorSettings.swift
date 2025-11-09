@@ -17,20 +17,6 @@
 // higher than that, and samples are too similar to each other, lower than that, and too many samples are invalid.
 // TODO evaluate this independently for every mutator.
 
-var defaultMaxSimultaneousMutations = 7
-var defaultMaxSimultaneousCodeGenerations = 3
-var defaultCodeGenerationAmount = 5 // This must be at least ProgramBuilder.minBudgetForRecursiveCodeGeneration
-var defaultMinVisibleVariables = 3   
-var defaultFracUntypedVariablesToExplore = 0.5   
-var defaultFracTypedVariablesToExplore = 0.25
-var defaultExploreVarInsert = 5
-var defaultProbabilityOfFixingUnguardedInstruction = 0.5
-var defaultAggressiveness = 2
-var defaultMutateOrExtendProbability = 0.5
-var defaultFracVariablesToProbe = 0.5
-
-var defaultNumFunctions=1
-var defaultLoopIterations = 500
-var defaultFunctionSize = 10
-var defaultUseBranching = 0.5
-var defaultInsertRestCalls = 0.3
+let defaultMaxSimultaneousMutations = 7
+let defaultMaxSimultaneousCodeGenerations = 3
+let defaultCodeGenerationAmount = 5      // This must be at least ProgramBuilder.minBudgetForRecursiveCodeGeneration

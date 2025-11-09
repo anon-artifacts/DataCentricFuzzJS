@@ -98,60 +98,6 @@ class TerminalUI {
                 }
             }
         }
-        
-    }
-
-    func getStats(_ stats: Fuzzilli_Protobuf_Statistics, of fuzzer: Fuzzer) -> [String: Any] {
-        let state: String
-        switch fuzzer.state {
-        case .uninitialized:
-            fatalError("This state should never be observed here")
-        case .waiting:
-            state = "Waiting for corpus from manager"
-        case .corpusImport:
-            let progress = String(format: "%.2f%", fuzzer.corpusImportProgress() * 100)
-            state = "Corpus import (\(progress)% completed)"
-        case .corpusGeneration:
-            state = "Initial corpus generation (with \(fuzzer.corpusGenerationEngine.name))"
-        case .fuzzing:
-            state = "Fuzzing (with \(fuzzer.engine.name))"
-        }
-
-        let timeSinceLastInterestingProgram = -lastInterestingProgramFound.timeIntervalSinceNow
-
-        let maybeAvgCorpusSize = stats.numChildNodes > 0 ? " (global average: \(Int(stats.avgCorpusSize)))" : ""
-
-
-        let cestDateFormatter = DateFormatter()
-        cestDateFormatter.dateFormat = "HH:mm:ss - dd.MM.yyyy"
-        cestDateFormatter.timeZone = TimeZone(abbreviation: "CEST")
-        let date = Date()
-
-        return [
-            "state": state,
-            "uptime": formatTimeInterval(fuzzer.uptime()),
-            "currentTime": cestDateFormatter.string(from: date),
-            "totalSamples": stats.totalSamples,
-            "interestingSamplesFound": stats.interestingSamples,
-            "lastInterestingSample": formatTimeInterval(timeSinceLastInterestingProgram),
-            "validSamplesFound": stats.validSamples,
-            "corpusSize": "\(fuzzer.corpus.size)\(maybeAvgCorpusSize)",
-            "correctnessRate": String(format: "%.2f%%", stats.correctnessRate * 100),
-            "overallCorrectnessRate": String(format: "%.2f%%", stats.overallCorrectnessRate * 100),
-            "timeoutRate": String(format: "%.2f%%", stats.timeoutRate * 100),
-            "overallTimeoutRate": String(format: "%.2f%%", stats.overallTimeoutRate * 100),
-            "crashesFound": stats.crashingSamples,
-            "timeoutsHit": stats.timedOutSamples,
-            "coverage": String(format: "%.2f%%", stats.coverage * 100),
-            "avgProgramSize": String(format: "%.2f", stats.avgProgramSize),
-            "avgCorpusProgramSize": String(format: "%.2f", stats.avgCorpusProgramSize),
-            "avgProgramExecutionTime": Int(stats.avgExecutionTime * 1000),
-            "connectedNodes": stats.numChildNodes,
-            "execsPerSecond": String(format: "%.2f", stats.execsPerSecond),
-            "fuzzerOverhead": String(format: "%.2f", stats.fuzzerOverhead * 100),
-            "minimizationOverhead": String(format: "%.2f", stats.minimizationOverhead * 100),
-            "totalExecs": stats.totalExecs
-        ]
     }
 
     func printStats(_ stats: Fuzzilli_Protobuf_Statistics, of fuzzer: Fuzzer) {
@@ -189,7 +135,6 @@ class TerminalUI {
         Valid Samples Found:          \(stats.validSamples)
         Corpus Size:                  \(fuzzer.corpus.size)\(maybeAvgCorpusSize)
         Correctness Rate:             \(String(format: "%.2f%%", stats.correctnessRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallCorrectnessRate * 100)))
-        JIT Trigger Rate:             \(String(format: "%.2f%%", stats.jitTriggerRate * 100))
         Timeout Rate:                 \(String(format: "%.2f%%", stats.timeoutRate * 100)) (overall: \(String(format: "%.2f%%", stats.overallTimeoutRate * 100)))
         Crashes Found:                \(stats.crashingSamples)
         Timeouts Hit:                 \(stats.timedOutSamples)

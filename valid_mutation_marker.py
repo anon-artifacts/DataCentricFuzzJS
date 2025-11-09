@@ -33,7 +33,7 @@ def extract_score_shap_via_cache(filepath, fid):
     filtered_static = {k: static_features.get(k, 0) for k in static_features_selected}
 
     # Extract dynamic features
-    flags = "--expose-gc --expose-externalize-string --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --wasm-staging --wasm-fast-api --expose-fast-api --experimental-wasm-memory64"
+    flags = "--expose-gc --expose-externalize-string --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --experimental-fuzzing --js-staging --wasm-staging --wasm-fast-api --expose-fast-api --experimental-wasm-rab-integration --wasm-test-streaming"
     dynamic_features_str = extract_features_via_cli(filepath, flags=flags, static="0")
     dynamic_features = parse_feature_dict(dynamic_features_str)
     filtered_dynamic = {
@@ -215,7 +215,7 @@ def run_js_slow(
         features_dict = {
             k: v for k, v in features_dict.items() if k in selected_dynamic_features
         }
-        flags = "--expose-gc --expose-externalize-string --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --wasm-staging --wasm-fast-api --expose-fast-api --experimental-wasm-memory64"
+        flags = "--expose-gc --expose-externalize-string --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --experimental-fuzzing --js-staging --wasm-staging --wasm-fast-api --expose-fast-api --experimental-wasm-rab-integration --wasm-test-streaming"
 
         features_dict_mutated = parse_feature_dict(
             extract_features_via_cli(mutated_filepath, flags=flags, static="0")
@@ -318,7 +318,7 @@ def insert_into_cache(path, id=None):
         }
 
         # Extract dynamic features
-        flags = "--expose-gc --expose-externalize-string --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --js-staging --wasm-staging --wasm-fast-api --expose-fast-api --experimental-wasm-memory64"
+        flags = "--expose-gc --expose-externalize-string --omit-quit --allow-natives-syntax --fuzzing --jit-fuzzing --future --harmony --experimental-fuzzing --js-staging --wasm-staging --wasm-fast-api --expose-fast-api --experimental-wasm-rab-integration --wasm-test-streaming"
         dynamic_features_str = extract_features_via_cli(
             js_file, flags=flags, static="0"
         )

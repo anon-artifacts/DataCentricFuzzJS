@@ -47,11 +47,11 @@ let duktapeProfile = Profile(
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
     disabledCodeGenerators: [],
-    
+
     disabledMutators: [],
 
     additionalBuiltins: [
-        "CBOR.encode"               :  .function([.anything] => .object()),
+        "CBOR.encode"               :  .function([.jsAnything] => .object()),
         "CBOR.decode"               :  .function([.object()] => .object()),
         "Duktape.fin"               :  .function([.object(), .opt(.function())] => .undefined),
         "Duktape.act"               :  .function([.number] => .object()),
@@ -62,6 +62,8 @@ let duktapeProfile = Profile(
     ],
 
     additionalObjectGroups: [],
+
+    additionalEnumerations: [],
 
     optionalPostProcessor: nil
 )

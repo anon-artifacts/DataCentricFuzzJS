@@ -28,6 +28,7 @@ message LogMessage {
 message FuzzerState {
     bytes corpus = 1;
     bytes evaluatorState = 2;
+    bool isWasmEnabled = 3;
 }
 
 message Statistics {
@@ -79,9 +80,6 @@ message Statistics {
         /// The correctness rate of recently generated programs (number of valid programs divided by number of generated programs).
         double correctnessRate = 16;
 
-        /// The JIT Trigger rate of recently generated programs 
-        double jitTriggerRate = 17;
-
         /// The timeout rate of recently generated programs (number of timeouts divided by number of generated programs).
-        double timeoutRate = 18;
+        double timeoutRate = 17;
 }

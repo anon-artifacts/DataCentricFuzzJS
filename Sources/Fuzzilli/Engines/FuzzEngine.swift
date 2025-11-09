@@ -17,7 +17,8 @@ import Foundation
 import FoundationNetworking
 #endif
 public class FuzzEngine: ComponentBase {
-    private var postProcessor: FuzzingPostProcessor? = nil
+    private(set) var postProcessor: FuzzingPostProcessor? = nil
+
 
     public var allowExploration: Bool = true
     public var added: Bool = false

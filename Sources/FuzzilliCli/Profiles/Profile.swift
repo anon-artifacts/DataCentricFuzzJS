@@ -35,6 +35,7 @@ struct Profile {
 
     let additionalBuiltins: [String: ILType]
     let additionalObjectGroups: [ObjectGroup]
+    let additionalEnumerations: [ILType]
 
     // An optional post-processor that is executed for every sample generated for fuzzing and can modify it.
     let optionalPostProcessor: FuzzingPostProcessor?
@@ -46,6 +47,7 @@ let profiles = [
     "jsc": jscProfile,
     "spidermonkey": spidermonkeyProfile,
     "v8": v8Profile,
+    "v8Sandbox": v8SandboxProfile,
     "duktape": duktapeProfile,
     "jerryscript": jerryscriptProfile,
     "xs": xsProfile,

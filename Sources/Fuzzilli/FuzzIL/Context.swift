@@ -13,7 +13,25 @@
 // limitations under the License.
 
 /// Current context in the program
-public struct Context: OptionSet {
+public struct Context: OptionSet, Hashable, CaseIterable {
+    public static var allCases: [Context] = [
+        .javascript,
+        .subroutine,
+        .generatorFunction,
+        .asyncFunction,
+        .method,
+        .classMethod,
+        .loop,
+        .objectLiteral,
+        .classDefinition,
+        .switchBlock,
+        .switchCase,
+        .wasm,
+        .wasmFunction,
+        .wasmTypeGroup,
+        .empty,
+    ]
+
     public let rawValue: UInt32
 
     public init(rawValue: UInt32) {
@@ -39,32 +57,73 @@ public struct Context: OptionSet {
     public static let classMethod       = Context(rawValue: 1 << 5)
     // Inside a loop.
     public static let loop              = Context(rawValue: 1 << 6)
-    // Inside a with statement.
-    public static let with              = Context(rawValue: 1 << 7)
     // Inside an object literal.
-    public static let objectLiteral     = Context(rawValue: 1 << 8)
+    public static let objectLiteral     = Context(rawValue: 1 << 7)
     // Inside a class definition.
-    public static let classDefinition   = Context(rawValue: 1 << 9)
+    public static let classDefinition   = Context(rawValue: 1 << 8)
     // Inside a switch block.
-    public static let switchBlock       = Context(rawValue: 1 << 10)
+    public static let switchBlock       = Context(rawValue: 1 << 9)
     // Inside a switch case.
-    public static let switchCase        = Context(rawValue: 1 << 11)
+    public static let switchCase        = Context(rawValue: 1 << 10)
     // Inside a wasm module
-    public static let wasm              = Context(rawValue: 1 << 12)
+    public static let wasm              = Context(rawValue: 1 << 11)
     // Inside a function in a wasm module
-    public static let wasmFunction      = Context(rawValue: 1 << 13)
-    // Inside a block of a wasm function, allows branches
-    public static let wasmBlock         = Context(rawValue: 1 << 14)
+    public static let wasmFunction      = Context(rawValue: 1 << 12)
+    // Inside a wasm recursive type group definition.
+    public static let wasmTypeGroup     = Context(rawValue: 1 << 13)
 
     public static let empty             = Context([])
-
-    // These contexts have ValueGenerators and as such we can .buildPrefix in them.
-    public var isValueBuildableContext: Bool {
-        self.contains(.wasmFunction) || self.contains(.javascript)
-    }
-
+    
     public var inWasm: Bool {
-        // .wasmBlock is propagating surrounding context
         self.contains(.wasm) || self.contains(.wasmFunction)
+    }
+}
+
+extension Context: CustomStringConvertible {
+    public var description: String {
+        var strings: [String] = []
+        if self.contains(.javascript) {
+            strings.append(".javascript")
+        }
+        if self.contains(.subroutine) {
+            strings.append(".subroutine")
+        }
+        if self.contains(.generatorFunction) {
+            strings.append(".generatorFunction")
+        }
+        if self.contains(.asyncFunction) {
+            strings.append(".asyncFunction")
+        }
+        if self.contains(.method) {
+            strings.append(".method")
+        }
+        if self.contains(.classMethod) {
+            strings.append(".classMethod")
+        }
+        if self.contains(.loop) {
+            strings.append(".loop")
+        }
+        if self.contains(.objectLiteral) {
+            strings.append(".objectLiteral")
+        }
+        if self.contains(.classDefinition) {
+            strings.append(".classDefinition")
+        }
+        if self.contains(.switchBlock) {
+            strings.append(".switchBlock")
+        }
+        if self.contains(.switchCase) {
+            strings.append(".switchCase")
+        }
+        if self.contains(.wasm) {
+            strings.append(".wasm")
+        }
+        if self.contains(.wasmFunction) {
+            strings.append(".wasmFunction")
+        }
+        if self.contains(.wasmTypeGroup) {
+            strings.append(".wasmTypeGroup")
+        }
+        return strings.joined(separator: " | ")
     }
 }

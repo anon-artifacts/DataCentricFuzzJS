@@ -24,6 +24,28 @@ class LiveTests: XCTestCase {
     // Set to true to log failing programs
     static let VERBOSE = false
 
+    /// Meta-test ensuring that the test framework can successfully terminate an endless loop.
+    func testEndlessLoopTermination() throws {
+        let runner =  try GetJavaScriptExecutorOrSkipTest()
+
+        let results = try Self.runLiveTest(iterations: 1, withRunner: runner, timeoutInSeconds: 1) { b in
+            b.loadInt(123) // prefix
+
+            let module = b.buildWasmModule() { module in
+                module.addWasmFunction(with: [] => []) { function, label, args in
+                    function.wasmBuildLoop(with: [] => [], args: []) { label, args in
+                        function.wasmBranch(to: label)
+                        return []
+                    }
+                    return []
+                }
+            }
+            b.callMethod(module.getExportedMethod(at: 0), on: module.loadExports(), withArgs: [])
+        }
+        assert(results.failureRate == 1)
+        assert(results.failureMessages.count == 1)
+    }
+
     func testValueGeneration() throws {
         let runner = try GetJavaScriptExecutorOrSkipTest()
 
@@ -36,9 +58,18 @@ class LiveTests: XCTestCase {
     }
 
     func testWasmCodeGenerationAndCompilation() throws {
-        let runner =  try GetJavaScriptExecutorOrSkipTest()
+        let runner =  try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref", "--wasm-allow-mixed-eh-for-testing"])
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
+            // Fuzzilli can't handle situations where there aren't any variables available.
+            // Calling buildPrefix() however would significantly increase the error rate due to
+            // the prefix itself failing. Instead we just create a dummy integer to bypass these
+            // checks for having a prefix.
+            b.loadInt(123)
+            // Make sure we have some wasm-gc types that can be used by the wasm module.
+            b.wasmDefineTypeGroup {
+                b.build(n: 5)
+            }
             // Make sure that we have at least one JavaScript function that we can call.
             b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 b.doReturn(b.binary(args[0], b.loadInt(1), with: .Add))
@@ -51,9 +82,11 @@ class LiveTests: XCTestCase {
 
             b.buildWasmModule() { module in
                 module.addMemory(minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
-                module.addWasmFunction(with: [] => .nothing) { function, args in
+                let signature = b.randomWasmSignature()
+                module.addWasmFunction(with: signature) { function, label, args in
                     b.buildPrefix()
                     b.build(n: 40)
+                    return signature.outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)!}
                 }
             }
         }
@@ -63,11 +96,20 @@ class LiveTests: XCTestCase {
     }
 
     func testWasmCodeGenerationAndCompilationAndExecution() throws {
-        let runner =  try GetJavaScriptExecutorOrSkipTest()
+        let runner =  try GetJavaScriptExecutorOrSkipTest(type: .any, withArguments: ["--experimental-wasm-exnref", "--wasm-allow-mixed-eh-for-testing"])
 
         let results = try Self.runLiveTest(withRunner: runner) { b in
+            // Fuzzilli can't handle situations where there aren't any variables available.
+            // Calling buildPrefix() however would significantly increase the error rate due to
+            // the prefix itself failing. Instead we just create a dummy integer to bypass these
+            // checks for having a prefix.
+            b.loadInt(123)
+            // Make sure we have some wasm-gc types that can be used by the wasm module.
+            b.wasmDefineTypeGroup {
+                b.build(n: 5)
+            }
             // Make sure that we have at least one JavaScript function that we can call.
-            b.buildPlainFunction(with: .parameters(n: 1)) { args in
+            let jsFunction = b.buildPlainFunction(with: .parameters(n: 1)) { args in
                 b.doReturn(args[0])
             }
             // Make at least one Wasm global available
@@ -76,18 +118,36 @@ class LiveTests: XCTestCase {
             b.createWasmJSTag()
             b.createWasmTag(parameterTypes: [.wasmi32, .wasmf64])
 
+            let wasmSignature = b.randomWasmSignature()
             let m = b.buildWasmModule() { module in
                 module.addMemory(minPages: 2, maxPages: probability(0.5) ? nil : 5, isMemory64: probability(0.5))
-                module.addWasmFunction(with: [] => .nothing) { function, args in
+                module.addWasmFunction(with: wasmSignature) { function, label, args in
                     b.buildPrefix()
                     b.build(n: 40)
+                    return wasmSignature.outputTypes.map {b.randomVariable(ofType: $0) ?? function.generateRandomWasmVar(ofType: $0)!}
                 }
             }
 
             // The wasm exception handling proposal contains instructions to deliberately trigger
             // exceptions. Catch these exceptions here to not treat them as test failures.
             b.buildTryCatchFinally {
-                b.callMethod(m.getExportedMethod(at: 0), on: m.loadExports())
+                // TODO(manoskouk): Once we support wasm-gc types in signatures, we'll need
+                // something more sophisticated.
+                let args = wasmSignature.parameterTypes.map {
+                    switch $0 {
+                        case .wasmi64:
+                            return b.loadBigInt(123)
+                        case .wasmFuncRef:
+                            return jsFunction
+                        case .wasmNullExternRef, .wasmNullFuncRef, .wasmNullRef:
+                            return b.loadNull()
+                        case .wasmExternRef, .wasmAnyRef:
+                            return b.createObject(with: [:])
+                        default:
+                            return b.loadInt(321)
+                    }
+                }
+                b.callMethod(m.getExportedMethod(at: 0), on: m.loadExports(), withArgs: args)
             } catchBody: { exception in
                 let wasmGlobal = b.createNamedVariable(forBuiltin: "WebAssembly")
                 let wasmException = b.getProperty("Exception", of: wasmGlobal)
@@ -104,7 +164,7 @@ class LiveTests: XCTestCase {
     // The closure can use the ProgramBuilder to emit a program of a specific
     // shape that is then executed with the given runner. We then check that
     // we stay below the maximum failure rate over the given number of iterations.
-    static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, body: (ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
+    static func runLiveTest(iterations n: Int = 250, withRunner runner: JavaScriptExecutor, timeoutInSeconds: Int = 5, body: (ProgramBuilder) -> Void) throws -> (failureRate: Double, failureMessages: [String: Int]) {
         let liveTestConfig = Configuration(logLevel: .error, enableInspection: true)
 
         // We have to use the proper JavaScriptEnvironment here.
@@ -140,7 +200,7 @@ class LiveTests: XCTestCase {
         }
 
         DispatchQueue.concurrentPerform(iterations: n) { i in
-            let result = executeAndParseResults(program: programs[i], runner: runner)
+            let result = executeAndParseResults(program: programs[i], runner: runner, timeoutInSeconds: timeoutInSeconds)
             results[i] = result
         }
 
@@ -176,14 +236,15 @@ class LiveTests: XCTestCase {
         }
     }
 
-    static func executeAndParseResults(program: (program: Program, jsProgram: String), runner: JavaScriptExecutor) -> ExecutionResult {
+    static func executeAndParseResults(program: (program: Program, jsProgram: String), runner: JavaScriptExecutor, timeoutInSeconds: Int) -> ExecutionResult {
 
         do {
-            let result = try runner.executeScript(program.jsProgram, withTimeout: 5 * Seconds)
+            let result = try runner.executeScript(program.jsProgram,
+                withTimeout: Double(timeoutInSeconds) * Seconds)
             if result.isFailure {
                 var signature: String? = nil
 
-                for line in result.output.split(separator: "\n") {
+                for line in (result.output + result.error).split(separator: "\n") {
                     if line.contains("Error:") {
                         // Remove anything after a potential 2nd ":", which is usually testcase dependent content, e.g. "SyntaxError: Invalid regular expression: /ep{}[]Z7/: Incomplete quantifier"
                         signature = line.split(separator: ":")[0...1].joined(separator: ":")

@@ -38,7 +38,7 @@ class JsOperation: Operation {
 /// unguarded ones if no runtime exception is raised.
 ///
 /// The outputs of guarded operations (i.e. `GuardableOperations`
-/// where the guard is active) should always be typed as `.anything`
+/// where the guard is active) should always be typed as `.jsAnything`
 /// by our static type inference. This allows us to try and fix failing
 /// operations at runtime (when we have a full picture of e.g. the methods
 /// that exist on an object or the types of variables available as inputs)
@@ -69,6 +69,8 @@ class GuardableOperation: JsOperation {
             return GetProperty(propertyName: op.propertyName, isGuarded: true)
         case .deleteProperty(let op):
             return DeleteProperty(propertyName: op.propertyName, isGuarded: true)
+        case .setProperty(let op):
+            return SetProperty(propertyName: op.propertyName, isGuarded: true)
         case .getElement(let op):
             return GetElement(index: op.index, isGuarded: true)
         case .deleteElement(let op):
@@ -111,6 +113,8 @@ class GuardableOperation: JsOperation {
             return GetProperty(propertyName: op.propertyName, isGuarded: false)
         case .deleteProperty(let op):
             return DeleteProperty(propertyName: op.propertyName, isGuarded: false)
+        case .setProperty(let op):
+            return SetProperty(propertyName: op.propertyName, isGuarded: false)
         case .getElement(let op):
             return GetElement(index: op.index, isGuarded: false)
         case .deleteElement(let op):
@@ -179,9 +183,11 @@ final class LoadString: JsOperation {
     override var opcode: Opcode { .loadString(self) }
 
     let value: String
+    let customName: String?
 
-    init(value: String) {
+    init(value: String, customName: String? = nil) {
         self.value = value
+        self.customName = customName
         super.init(numOutputs: 1, attributes: [.isMutable])
     }
 }
@@ -318,10 +324,33 @@ final class LoadDisposableVariable: JsOperation {
     }
 }
 
+final class CreateNamedDisposableVariable: JsOperation {
+    override var opcode: Opcode { .createNamedDisposableVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
+        // TODO: Add support for block context, see details above.
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .subroutine])
+    }
+}
+
 final class LoadAsyncDisposableVariable: JsOperation {
     override var opcode: Opcode { .loadAsyncDisposableVariable(self) }
 
     init() {
+        super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
+    }
+}
+
+final class CreateNamedAsyncDisposableVariable: JsOperation {
+    override var opcode: Opcode { .createNamedAsyncDisposableVariable(self) }
+
+    let variableName: String
+
+    init(_ name: String) {
+        self.variableName = name
         super.init(numInputs: 1, numOutputs: 1, requiredContext: [.javascript, .asyncFunction])
     }
 }
@@ -645,9 +674,11 @@ final class BeginClassDefinition: JsOperation {
     override var opcode: Opcode { .beginClassDefinition(self) }
 
     let hasSuperclass: Bool
+    let isExpression: Bool
 
-    init(hasSuperclass: Bool) {
+    init(hasSuperclass: Bool, isExpression: Bool) {
         self.hasSuperclass = hasSuperclass
+        self.isExpression = isExpression
         super.init(numInputs: hasSuperclass ? 1 : 0, numOutputs: 1, attributes: .isBlockStart, contextOpened: .classDefinition)
     }
 }
@@ -719,6 +750,19 @@ final class BeginClassInstanceMethod: BeginAnySubroutine {
 
 final class EndClassInstanceMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassInstanceMethod(self) }
+}
+
+final class BeginClassInstanceComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassInstanceComputedMethod(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassInstanceComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassInstanceComputedMethod(self) }
 }
 
 final class BeginClassInstanceGetter: BeginAnySubroutine {
@@ -825,6 +869,19 @@ final class BeginClassStaticMethod: BeginAnySubroutine {
 
 final class EndClassStaticMethod: EndAnySubroutine {
     override var opcode: Opcode { .endClassStaticMethod(self) }
+}
+
+final class BeginClassStaticComputedMethod: BeginAnySubroutine {
+    override var opcode: Opcode { .beginClassStaticComputedMethod(self) }
+
+    init(parameters: Parameters) {
+        // First inner output is the explicit |this| parameter
+        super.init(parameters: parameters, numInputs: 1, numInnerOutputs: parameters.count + 1, attributes: [.isBlockStart], requiredContext: .classDefinition, contextOpened: [.javascript, .subroutine, .method, .classMethod])
+    }
+}
+
+final class EndClassStaticComputedMethod: EndAnySubroutine {
+    override var opcode: Opcode { .endClassStaticComputedMethod(self) }
 }
 
 final class BeginClassStaticGetter: BeginAnySubroutine {
@@ -1010,14 +1067,14 @@ final class GetProperty: GuardableOperation {
     }
 }
 
-final class SetProperty: JsOperation {
+final class SetProperty: GuardableOperation {
     override var opcode: Opcode { .setProperty(self) }
 
     let propertyName: String
 
-    init(propertyName: String) {
+    init(propertyName: String, isGuarded: Bool) {
         self.propertyName = propertyName
-        super.init(numInputs: 2, attributes: .isMutable)
+        super.init(isGuarded: isGuarded, numInputs: 2, attributes: .isMutable)
     }
 }
 
@@ -1058,6 +1115,10 @@ public struct PropertyFlags: OptionSet {
 
     public static func random() -> PropertyFlags {
         return PropertyFlags(rawValue: UInt8.random(in: 0..<8))
+    }
+
+    public static func randomWithoutWritable() -> PropertyFlags {
+        return PropertyFlags(rawValue: UInt8.random(in: 0..<8) & 0b1111_1110)
     }
 }
 
@@ -1789,7 +1850,7 @@ final class BeginWith: JsOperation {
     override var opcode: Opcode { .beginWith(self) }
 
     init() {
-        super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript, .with])
+        super.init(numInputs: 1, attributes: [.isBlockStart, .propagatesSurroundingContext], contextOpened: [.javascript])
     }
 }
 
@@ -2464,6 +2525,14 @@ class BindMethod: JsOperation {
     }
 }
 
+class BindFunction: JsOperation {
+    override var opcode: Opcode { .bindFunction(self) }
+
+    init(numInputs: Int) {
+        super.init(numInputs: numInputs, numOutputs: 1, firstVariadicInput: 1,
+            attributes: [.isVariadic], requiredContext: .javascript)
+    }
+}
 
 // This instruction is used to create strongly typed WasmGlobals in the JS world that can be imported by a WasmModule.
 class CreateWasmGlobal: JsOperation {
@@ -2498,8 +2567,8 @@ class CreateWasmTable: JsOperation {
     // We need to store the element type here such that the lifter can easily list the correct type 'externref' or 'anyfunc' when constructing.
     let tableType: WasmTableType
 
-    init(elementType: ILType, limits: Limits) {
-        self.tableType = WasmTableType(elementType: elementType, limits: limits)
+    init(elementType: ILType, limits: Limits, isTable64: Bool) {
+        self.tableType = WasmTableType(elementType: elementType, limits: limits, isTable64: isTable64, knownEntries: [])
         super.init(numOutputs: 1, attributes: [.isMutable], requiredContext: [.javascript])
     }
 }
@@ -2514,13 +2583,88 @@ class CreateWasmJSTag: JsOperation {
 
 class CreateWasmTag: JsOperation {
     override var opcode: Opcode { .createWasmTag(self) }
-    public let parameters: ParameterList
+    public let parameterTypes: [ILType]
 
-    init(parameters: ParameterList) {
-        self.parameters = parameters
-        // Note that tags in wasm are nominal (differently to types) meaning that two tags with the same input are not
-        // the same, therefore this operation is not considered to be .pure.
+    init(parameterTypes: [ILType]) {
+        self.parameterTypes = parameterTypes
         super.init(numOutputs: 1, attributes: [], requiredContext: [.javascript])
+    }
+}
+
+class WasmTypeOperation : Operation {}
+
+class WasmBeginTypeGroup: WasmTypeOperation {
+    override var opcode: Opcode { .wasmBeginTypeGroup(self) }
+    init() {
+        super.init(attributes: [.isBlockStart], requiredContext: [.javascript],
+                   contextOpened: [.wasmTypeGroup])
+    }
+}
+
+class WasmEndTypeGroup: WasmTypeOperation {
+    override var opcode: Opcode { .wasmEndTypeGroup(self) }
+    var typesCount: Int {
+        return numInputs
+    }
+
+    init(typesCount: Int) {
+        super.init(numInputs: typesCount, numOutputs: typesCount, firstVariadicInput: 0,
+                   attributes: [.isBlockEnd, .resumesSurroundingContext, .isVariadic, .isNotInputMutable],
+                   requiredContext: [.wasmTypeGroup])
+    }
+}
+
+class WasmDefineArrayType: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineArrayType(self) }
+    let elementType : ILType
+    let mutability: Bool
+
+    init(elementType: ILType, mutability: Bool) {
+        self.elementType = elementType
+        self.mutability = mutability
+        super.init(numInputs: elementType.requiredInputCount(), numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
+class WasmDefineStructType: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineStructType(self) }
+
+    typealias Field = WasmStructTypeDescription.Field
+
+    let fields: [Field]
+
+    init(fields: [Field]) {
+        self.fields = fields
+        let numInputs = fields.map { $0.type.requiredInputCount() }.reduce(0) { $0 + $1 }
+        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
+class WasmDefineSignatureType: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineSignatureType(self) }
+    let signature: WasmSignature
+
+    init(signature: WasmSignature) {
+        self.signature = signature
+        let numInputs = (signature.outputTypes + signature.parameterTypes).map {
+            $0.requiredInputCount() }.reduce(0) { $0 + $1 }
+        super.init(numInputs: numInputs, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
+class WasmDefineForwardOrSelfReference: WasmTypeOperation {
+    override var opcode: Opcode { .wasmDefineForwardOrSelfReference(self) }
+
+    init() {
+        super.init(numInputs: 0, numOutputs: 1, requiredContext: [.wasmTypeGroup])
+    }
+}
+
+class WasmResolveForwardReference: WasmTypeOperation {
+    override var opcode: Opcode { .wasmResolveForwardReference(self) }
+
+    init() {
+        super.init(numInputs: 2, numOutputs: 0, requiredContext: [.wasmTypeGroup])
     }
 }
 

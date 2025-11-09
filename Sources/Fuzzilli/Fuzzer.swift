@@ -42,6 +42,9 @@ public class Fuzzer {
     /// The active code generators. It is possible to change these (temporarily) at runtime. This is e.g. done by some ProgramTemplates.
     public private(set) var codeGenerators: WeightedList<CodeGenerator>
 
+    // This needs to stay in sync with the provided codeGenerators.
+    public private(set) var contextGraph: ContextGraph
+
     /// The active program templates. These are only used if the HybridEngine is enabled.
     public let programTemplates: WeightedList<ProgramTemplate>
 
@@ -52,7 +55,7 @@ public class Fuzzer {
     public let evaluator: ProgramEvaluator
 
     /// The model of the target environment.
-    public let environment: Environment
+    public let environment: JavaScriptEnvironment
 
     /// The lifter to translate FuzzIL programs to the target language.
     public let lifter: Lifter
@@ -157,7 +160,7 @@ public class Fuzzer {
     public init(
         configuration: Configuration, scriptRunner: ScriptRunner, engine: FuzzEngine, mutators: WeightedList<Mutator>,
         codeGenerators: WeightedList<CodeGenerator>, programTemplates: WeightedList<ProgramTemplate>, evaluator: ProgramEvaluator,
-        environment: Environment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
+        environment: JavaScriptEnvironment, lifter: Lifter, corpus: Corpus, minimizer: Minimizer, queue: DispatchQueue? = nil
     ) {
         let uniqueId = UUID()
         self.id = uniqueId
@@ -169,6 +172,7 @@ public class Fuzzer {
         self.engine = engine
         self.mutators = mutators
         self.codeGenerators = codeGenerators
+
         self.programTemplates = programTemplates
         self.evaluator = evaluator
         self.environment = environment
@@ -177,6 +181,12 @@ public class Fuzzer {
         self.runner = scriptRunner
         self.minimizer = minimizer
         self.logger = Logger(withLabel: "Fuzzer")
+        self.contextGraph = ContextGraph(for: codeGenerators, withLogger: self.logger)
+
+        // Pass-through any postprocessor to the generative engine.
+        if let postProcessor = engine.postProcessor {
+            corpusGenerationEngine.registerPostProcessor(postProcessor)
+        }
 
         // Register this fuzzer instance with its queue so that it is possible to
         // obtain a reference to the Fuzzer instance when running on its queue.
@@ -211,6 +221,8 @@ public class Fuzzer {
         guard generators.contains(where: { $0.isValueGenerator }) else {
             fatalError("Code generators must contain at least one value generator")
         }
+        // This builds a graph that we need later for scheduling generators.
+        self.contextGraph = ContextGraph(for: generators, withLogger: self.logger)
         self.codeGenerators = generators
     }
 
@@ -239,7 +251,6 @@ public class Fuzzer {
 
         // Then initialize all components.
         engine.initialize(with: self)
-        //turning off coverage guidance
         evaluator.initialize(with: self)
         environment.initialize(with: self)
         corpus.initialize(with: self)
@@ -265,14 +276,29 @@ public class Fuzzer {
 
         // Install a timer to monitor for faulty code generators and program templates.
         timers.scheduleTask(every: 5 * Minutes) {
+            let nameMaxLength = self.codeGenerators.map({ $0.name.count }).max()!
+
             for generator in self.codeGenerators {
-                if generator.totalSamples >= 100 && generator.correctnessRate < 0.05 {
-                    self.logger.warning("Code generator \(generator.name) might be broken. Correctness rate is only \(generator.correctnessRate * 100)% after \(generator.totalSamples) generated samples")
+                for stub in generator.parts {
+                    if stub.invocationCount > 100 && stub.invocationSuccessRate! < 0.2 {
+                        let percentage = Statistics.percentageOrNa(stub.invocationSuccessRate, 7)
+                        let name = stub.name.rightPadded(toLength: nameMaxLength)
+                        let invocations = String(format: "%12d", stub.invocationCount)
+                        self.logger.warning("Code generator \(name) might have too restrictive dynamic requirements. Its successful invocation rate is only \(percentage)% after \(invocations) invocations")
+                    }
+                    if stub.totalSamples >= 100 && stub.correctnessRate! < 0.05 {
+                        let name = stub.name.rightPadded(toLength: nameMaxLength)
+                        let percentage = Statistics.percentageOrNa(stub.correctnessRate, 7)
+                        let totalSamples = String(format: "%10d", stub.totalSamples)
+                        self.logger.warning("Code generator \(name) might be broken. Correctness rate is only \(percentage)% after \(totalSamples) generated samples")
+                    }
                 }
             }
             for template in self.programTemplates {
-                if template.totalSamples >= 100 && template.correctnessRate < 0.05 {
-                    self.logger.warning("Program template \(template.name) might be broken. Correctness rate is only \(template.correctnessRate * 100)% after \(template.totalSamples) generated samples")
+                if template.totalSamples >= 100 && template.correctnessRate! < 0.05 {
+                    let percentage = Statistics.percentageOrNa(template.correctnessRate, 7)
+                    let totalSamples = String(format: "%10d", template.totalSamples)
+                    self.logger.warning("Program template \(template.name) might be broken. Correctness rate is only \(percentage)% after \(totalSamples) generated samples")
                 }
             }
         }
@@ -377,7 +403,16 @@ public class Fuzzer {
     }
 
     /// Tuple containing the result of importing a program.
-    public typealias ImportResult = (wasImported: Bool, executionOutcome: ExecutionOutcome)
+    public enum ImportResult {
+        case imported
+        case dropped
+        case needsWasm
+        case failed(ExecutionOutcome)
+    }
+
+    private func containsWasm(_ program: Program) -> Bool {
+        program.code.contains { $0.op.requiredContext.contains(.wasm) || $0.op.requiredContext.contains(.wasmTypeGroup)}
+    }
 
     /// Imports a potentially interesting program into this fuzzer.
     ///
@@ -390,7 +425,18 @@ public class Fuzzer {
         dispatchPrecondition(condition: .onQueue(queue))
 
         if enableDropout && probability(config.dropoutRate) {
-            return ImportResult(wasImported: false, executionOutcome: .succeeded)
+            return .dropped
+        }
+
+        if !config.isWasmEnabled && containsWasm(program) {
+            if let path = config.storagePath {
+                // Create a folder to store the excluded program if not existent, yet.
+                let dirName = "\(path)/\(Configuration.excludedWasmDirectory)"
+                try! FileManager.default.createDirectory(atPath: dirName, withIntermediateDirectories: true)
+                (modules["Storage"] as! Storage).storeProgram(program,
+                    as: "program_\(program.id).fzil", in: dirName)
+            }
+            return .needsWasm
         }
 
         let execution = execute(program, purpose: .programImport)
@@ -404,7 +450,6 @@ public class Fuzzer {
 
 
         case .succeeded:
-            //may need to turn off later
             if let aspects = evaluator.evaluate(execution) {
                 wasImported = processMaybeInteresting(program, havingAspects: aspects, origin: origin)
             }
@@ -421,7 +466,7 @@ public class Fuzzer {
             break
         }
 
-        return ImportResult(wasImported: wasImported, executionOutcome: execution.outcome)
+        return wasImported ? .imported : .failed(execution.outcome)
     }
 
     /// Imports a crashing program into this fuzzer.
@@ -510,15 +555,16 @@ public class Fuzzer {
     private static let maxProgramImportFixupAttempts = 3
     public func importProgramWithFixup(_ originalProgram: Program, origin: ProgramOrigin) -> (result: ImportResult, fixupAttempts: Int) {
         var program = originalProgram
-        
         var result = importProgram(program, origin: origin)
 
         // Only attempt fixup if the program failed to execute successfully. In particular, ignore timeouts and
         // crashes here, but also take into account that not all successfully executing programs will be imported.
-        if !result.executionOutcome.isFailure() {
-            return (result, 0)
+        switch result {
+            case .dropped, .needsWasm, .imported:
+                return (result, 0)
+            case .failed(_):
+                break
         }
-        assert(!result.wasImported)
 
         let b = makeBuilder()
 
@@ -537,10 +583,13 @@ public class Fuzzer {
         ]
         program = removeCallsTo(filteredFunctions, from: program)
         result = importProgram(program, origin: origin)
-        if !result.executionOutcome.isFailure() {
-            return (result, 1)
+        switch result {
+            case .dropped, .needsWasm, .imported:
+                return (result, 1)
+            case .failed(_):
+                break
         }
-        assert(!result.wasImported)
+
 
         // Second attempt at fixing the program: enable guards (try-catch) for all guardable operations, then
         // remove all guards that aren't needed (because no exception is thrown).
@@ -556,10 +605,12 @@ public class Fuzzer {
             program = result
         }
         result = importProgram(program, origin: origin)
-        if !result.executionOutcome.isFailure() {
-            return (result, 2)
+        switch result {
+            case .dropped, .needsWasm, .imported:
+                return (result, 2)
+            case .failed(_):
+                break
         }
-        assert(!result.wasImported)
 
         // Third and final attempt at fixing up the program: simply wrap the entire program in a try-catch block.
         b.buildTryCatchFinally(tryBody: {
@@ -641,66 +692,7 @@ public class Fuzzer {
     @discardableResult
     func processMaybeInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) -> Bool {
         var aspects = aspects
-        
-        // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
-        // event and insert the sample into the corpus.
-        /// Insert program into corpus (minimized or not) with given aspects
-        func processAndInsert(_ program: Program) {
-            func finishProcessing(_ program: Program) {
-                if config.enableInspection {
-                    if origin == .local {
-                        program.comments.add("Program is interesting due to \(aspects)", at: .footer)
-                    } else {
-                        program.comments.add("Imported program is interesting due to \(aspects)", at: .footer)
-                    }
-                }
-                assert(!program.code.contains(where: { $0.op is JsInternalOperation }))
-                dispatchEvent(events.InterestingProgramFound, data: (program, origin))
-               
-                // If we're running in static corpus mode, we only add programs to our corpus during corpus import.
-                if !config.staticCorpus || origin.isFromCorpusImport() {
-                    corpus.add(program, aspects)
-                }
-            }
 
-            if !origin.requiresMinimization() {
-                finishProcessing(program)
-            } else {
-                // Minimization should be performed as part of the fuzzing dispatch group. This way, the next fuzzing iteration
-                // will only start once the curent sample has been fully processed and inserted into the corpus.
-                fuzzGroup.enter()
-                minimizer.withMinimizedCopy(program, withAspects: aspects, limit: config.minimizationLimit) { minimizedProgram in
-                    self.fuzzGroup.leave()
-                    finishProcessing(minimizedProgram)
-                }
-            }
-        }
-
-        //// Run crash-predictor script and return score
-        func predictedCrashScore(_ program: Program) -> Double {
-            let options = LiftingOptions.includeComments
-            let code = lifter.lift(program, withOptions: options)
-
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/python3.13")
-            task.arguments = ["crash_predictor_cli.py", "predict", "--code", code]
-
-            let pipe = Pipe()
-            task.standardOutput = pipe
-            task.standardError = pipe
-
-            do {
-                try task.run()
-                task.waitUntilExit()
-                let output = pipe.fileHandleForReading.readDataToEndOfFile()
-                let result = String(data: output, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "0.0"
-                return Double(result) ?? 0.0
-            } catch {
-                logger.warning("Crash predictor script failed: \(error)")
-                return 0.0
-            }
-        }
-        
         // Determine which (if any) aspects of the program are triggered deterministially.
         // For that, the sample is executed at a few more times and the intersection of the interesting aspects of each execution is computed.
         // Once that intersection is stable, the remaining aspects are considered to be triggered deterministic.
@@ -710,21 +702,11 @@ public class Fuzzer {
         var attempt = 0
         repeat {
             attempt += 1
-            if attempt > maxAttempts{
+            if attempt > maxAttempts {
                 logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
                 return false
             }
-            /*
-            if attempt > maxAttempts || aspects.isEmpty {
-                if crashScore >= 0.9 {
-                    logger.info("Sample admitted due to high crash predictor score \(crashScore) despite no deterministic coverage.")
-                    processAndInsert(program)
-                    return true
-                }
-                logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
-                return false
-            }
-            */
+
             guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects) else {
                 // This likely means that no aspects are triggered deterministically, so discard this sample.
                 return false
@@ -739,78 +721,39 @@ public class Fuzzer {
         if origin == .local {
             iterationOfLastInteratingSample = iterations
         }
-        processAndInsert(program)
+
+        // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
+        // event and insert the sample into the corpus.
+        func finishProcessing(_ program: Program) {
+            if config.enableInspection {
+                if origin == .local {
+                    program.comments.add("Program is interesting due to \(aspects)", at: .footer)
+                } else {
+                    program.comments.add("Imported program is interesting due to \(aspects)", at: .footer)
+                }
+            }
+            assert(!program.code.contains(where: { $0.op is JsInternalOperation }))
+            dispatchEvent(events.InterestingProgramFound, data: (program, origin))
+
+            // If we're running in static corpus mode, we only add programs to our corpus during corpus import.
+            if !config.staticCorpus || origin.isFromCorpusImport() {
+                corpus.add(program, aspects)
+            }
+        }
+
+        if !origin.requiresMinimization() {
+            finishProcessing(program)
+        } else {
+            // Minimization should be performed as part of the fuzzing dispatch group. This way, the next fuzzing iteration
+            // will only start once the curent sample has been fully processed and inserted into the corpus.
+            fuzzGroup.enter()
+            minimizer.withMinimizedCopy(program, withAspects: aspects, limit: config.minimizationLimit) { minimizedProgram in
+                self.fuzzGroup.leave()
+                finishProcessing(minimizedProgram)
+            }
+        }
         return true
     }
-
-    /// Process a program that appears to have interesting aspects.
-    /// This function will first determine which (if any) of the interesting aspects are triggered reliably, then schedule the program for minimization and inclusion in the corpus.
-    /// Returns true if this program was interesting (i.e. had at least some interesting aspects that are triggered reliably), false if not.
-    // @discardableResult
-    // func processMaybeInteresting(_ program: Program, havingAspects aspects: ProgramAspects, origin: ProgramOrigin) -> Bool {
-    //     var aspects = aspects
-
-    //     // Determine which (if any) aspects of the program are triggered deterministially.
-    //     // For that, the sample is executed at a few more times and the intersection of the interesting aspects of each execution is computed.
-    //     // Once that intersection is stable, the remaining aspects are considered to be triggered deterministic.
-    //     let minAttempts = 5
-    //     let maxAttempts = 50
-    //     var didConverge = false
-    //     var attempt = 0
-    //     repeat {
-    //         attempt += 1
-    //         if attempt > maxAttempts {
-    //             logger.warning("Sample did not converage after \(maxAttempts) attempts. Discarding it")
-    //             return false
-    //         }
-
-    //         guard let intersection = evaluator.computeAspectIntersection(of: program, with: aspects) else {
-    //             // This likely means that no aspects are triggered deterministically, so discard this sample.
-    //             return false
-    //         }
-
-    //         // Since evaluateAndIntersect will only ever return aspects that are equivalent to, or a subset of,
-    //         // the provided aspects, we can check if they are identical by comparing their sizes
-    //         didConverge = aspects.count == intersection.count
-    //         aspects = intersection
-    //     } while !didConverge || attempt < minAttempts
-
-    //     if origin == .local {
-    //         iterationOfLastInteratingSample = iterations
-    //     }
-
-    //     // Determine whether the program needs to be minimized, then, using this helper function, dispatch the appropriate
-    //     // event and insert the sample into the corpus.
-    //     func finishProcessing(_ program: Program) {
-    //         if config.enableInspection {
-    //             if origin == .local {
-    //                 program.comments.add("Program is interesting due to \(aspects)", at: .footer)
-    //             } else {
-    //                 program.comments.add("Imported program is interesting due to \(aspects)", at: .footer)
-    //             }
-    //         }
-    //         assert(!program.code.contains(where: { $0.op is JsInternalOperation }))
-    //         dispatchEvent(events.InterestingProgramFound, data: (program, origin))
-
-    //         // If we're running in static corpus mode, we only add programs to our corpus during corpus import.
-    //         if !config.staticCorpus || origin.isFromCorpusImport() {
-    //             corpus.add(program, aspects)
-    //         }
-    //     }
-
-    //     if !origin.requiresMinimization() {
-    //         finishProcessing(program)
-    //     } else {
-    //         // Minimization should be performed as part of the fuzzing dispatch group. This way, the next fuzzing iteration
-    //         // will only start once the curent sample has been fully processed and inserted into the corpus.
-    //         fuzzGroup.enter()
-    //         minimizer.withMinimizedCopy(program, withAspects: aspects, limit: config.minimizationLimit) { minimizedProgram in
-    //             self.fuzzGroup.leave()
-    //             finishProcessing(minimizedProgram)
-    //         }
-    //     }
-    //     return true
-    // }
 
     /// Process a program that causes a crash.
     func processCrash(_ program: Program, withSignal termsig: Int, withStderr stderr: String, withStdout stdout: String, origin: ProgramOrigin, withExectime exectime: TimeInterval) {
@@ -837,9 +780,7 @@ public class Fuzzer {
             // Check for uniqueness only after minimization
             let execution = execute(program, withTimeout: self.config.timeout * 2, purpose: .checkForDeterministicBehavior)
             if case .crashed = execution.outcome {
-                //let isUnique = evaluator.evaluateCrash(execution) != nil
-                // changed here to remove coverage
-                let isUnique = true
+                let isUnique = evaluator.evaluateCrash(execution) != nil
                 dispatchEvent(events.CrashFound, data: (program, .deterministic, isUnique, origin))
             } else {
                 dispatchEvent(events.CrashFound, data: (program, .flaky, true, origin))
@@ -877,7 +818,7 @@ public class Fuzzer {
         case .none:
             break
         case .iterationsPerformed(let maxIterations):
-            if iterations > maxIterations {
+            if iterations >= maxIterations {
                 return shutdown(reason: .finished)
             }
         case .timeFuzzed(let maxRuntime):
@@ -920,11 +861,18 @@ public class Fuzzer {
                 logger.info("    \(currentCorpusImportJob.numberOfProgramsThatNeededThreeFixupAttempts) succeeded after attempt 3")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatFailedDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs failed to execute (even after fixup) and weren't imported")
                 logger.info("\(currentCorpusImportJob.numberOfProgramsThatTimedOutDuringImport)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs timed out and weren't imported")
+                if !config.isWasmEnabled {
+                    logger.info("\(currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled)/\(currentCorpusImportJob.totalNumberOfProgramsToImport) programs require Wasm which is disabled")
+                    if currentCorpusImportJob.numberOfProgramsRequiringWasmButDisabled > 0 && config.storagePath != nil {
+                        logger.info("  These programs have been stored at \(config.storagePath!)/\(Configuration.excludedWasmDirectory)/")
+                    }
+                }
 
                 let successRatio = Double(currentCorpusImportJob.numberOfProgramsThatExecutedSuccessfullyDuringImport) / Double(currentCorpusImportJob.totalNumberOfProgramsToImport)
                 let failureRatio = 1.0 - successRatio
                 if failureRatio >= 0.25 {
-                    logger.warning("\(String(format: "%.2f", failureRatio * 100))% of imported programs failed to execute successfully and therefore couldn't be imported.")
+                    let reason = config.isWasmEnabled ? "execute successfully" : "execute successfully or require currently disabled wasm"
+                    logger.warning("\(String(format: "%.2f", failureRatio * 100))% of imported programs failed to \(reason) and therefore couldn't be imported.")
                 }
 
                 dispatchEvent(events.CorpusImportComplete)
@@ -1018,13 +966,20 @@ public class Fuzzer {
             b.eval(test)
             execution = execute(b.finalize(), purpose: .startup)
 
+            if execution.outcome == .timedOut {
+                logger.fatal("Testcase \"\(test)\" timed out, the configured timeout threshold "
+                + "(\(config.timeout)ms) might be too low")
+            }
+
             switch expectedResult {
             case .shouldSucceed where execution.outcome != .succeeded:
-                logger.fatal("Testcase \"\(test)\" did not execute successfully")
+                logger.fatal("Testcase \"\(test)\" did not execute successfully" +
+                    "\nstdout:\n\(execution.stdout)\nstderr:\n\(execution.stderr)")
             case .shouldCrash where !execution.outcome.isCrash():
                 logger.fatal("Testcase \"\(test)\" did not crash")
             case .shouldNotCrash where execution.outcome.isCrash():
-                logger.fatal("Testcase \"\(test)\" unexpectedly crashed")
+                logger.fatal("Testcase \"\(test)\" unexpectedly crashed" +
+                    "\nstdout:\n\(execution.stdout)\nstderr:\n\(execution.stderr)")
             default:
                 // Test passed
                 break
@@ -1056,6 +1011,21 @@ public class Fuzzer {
             logger.warning("Cannot receive FuzzIL output (got \"\(output)\" instead of \"Hello World!\")")
         }
 
+        // Wrap the executor in a JavaScriptTestRunner
+        // If we can execute it standalone, it could inform us if any flags that were passed are incorrect, stale or conflicting.
+        let executor = JavaScriptExecutor(
+            withExecutablePath: runner.processArguments[0],
+            arguments: Array(runner.processArguments[1...]), env: runner.env)
+        do {
+            let output = try executor.executeScript("", withTimeout: 300).output
+            if output.lengthOfBytes(using: .utf8) > 0 {
+                logger.warning("Runner has non-empty output for empty program! This might indicate that some flags are wrong.")
+                logger.warning("Output:\n\(output)" )
+            }
+        } catch {
+            logger.warning("Could not run shell in standalone mode to check flags.")
+        }
+
         logger.info("Startup tests finished successfully")
     }
 
@@ -1077,6 +1047,7 @@ public class Fuzzer {
         private(set) var numberOfProgramsThatNeededOneFixupAttempt = 0
         private(set) var numberOfProgramsThatNeededTwoFixupAttempts = 0
         private(set) var numberOfProgramsThatNeededThreeFixupAttempts = 0
+        private(set) var numberOfProgramsRequiringWasmButDisabled = 0
 
         var numberOfProgramsThatNeededFixup: Int {
             assert(Fuzzer.maxProgramImportFixupAttempts == 3)
@@ -1100,19 +1071,10 @@ public class Fuzzer {
         }
 
         mutating func notifyImportOutcome(_ result: ImportResult, fixupAttempts: Int) {
-            switch result.executionOutcome {
-            case .crashed:
-                assert(!result.wasImported)
-                // This is unexpected so we don't track these
-                break
-            case .failed:
-                assert(!result.wasImported)
-                numberOfProgramsThatFailedDuringImport += 1
-            case .succeeded:
+            switch result {
+            case .imported:
                 numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
-                if result.wasImported {
-                    numberOfProgramsThatWereImport += 1
-                }
+                numberOfProgramsThatWereImport += 1
                 switch fixupAttempts {
                 case 0: break
                 case 1: numberOfProgramsThatNeededOneFixupAttempt += 1
@@ -1120,9 +1082,22 @@ public class Fuzzer {
                 case 3: numberOfProgramsThatNeededThreeFixupAttempts += 1
                 default: fatalError("Unexpected number of fixup rounds: \(fixupAttempts)")
                 }
-            case .timedOut:
-                assert(!result.wasImported)
-                numberOfProgramsThatTimedOutDuringImport += 1
+            case .dropped:
+                // Dropping a program is treated as success.
+                numberOfProgramsThatExecutedSuccessfullyDuringImport += 1
+                break
+            case .needsWasm:
+                numberOfProgramsRequiringWasmButDisabled += 1
+            case .failed(let outcome):
+                switch outcome {
+                case .crashed, .succeeded:
+                    // This is unexpected so we don't track these.
+                    break
+                case .failed:
+                    numberOfProgramsThatFailedDuringImport += 1
+                case .timedOut:
+                    numberOfProgramsThatTimedOutDuringImport += 1
+                }
             }
         }
 

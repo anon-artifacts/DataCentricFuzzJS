@@ -53,9 +53,6 @@ public class Statistics: Module {
     /// Moving average of the number of valid programs in the last 1000 generated programs.
     private var correctnessRate = MovingAverage(n: 1000)
 
-    /// Moving average of the number of JIT triggers in the last 1000 generated programs.
-    private var jitTriggerRate = MovingAverage(n: 1000)
-
     /// Moving average of the number of timeouts in the last 1000 generated programs.
     private var timeoutRate = MovingAverage(n: 1000)
 
@@ -66,6 +63,14 @@ public class Statistics: Module {
     private var inactiveNodes = Set<UUID>()
 
     public init() {}
+
+    static func percentageOrNa(_ percentage: Double?, _ padding: Int) -> String {
+        return if let percentage = percentage {
+            String(format: "%.2f%%", percentage * 100).leftPadded(toLength: padding)
+        } else {
+            "N/A"
+        }
+    }
 
     /// Computes and returns the statistical data for this instance and all connected nodes.
     public func compute() -> Fuzzilli_Protobuf_Statistics {
@@ -79,7 +84,6 @@ public class Statistics: Module {
         ownData.fuzzerOverhead = fuzzerOverheadAvg.currentValue
         ownData.minimizationOverhead = minimizationOverheadAvg.currentValue
         ownData.correctnessRate = correctnessRate.currentValue
-        ownData.jitTriggerRate = jitTriggerRate.currentValue
         ownData.timeoutRate = timeoutRate.currentValue
 
         // Compute global statistics data
@@ -108,7 +112,6 @@ public class Statistics: Module {
                 data.fuzzerOverhead += node.fuzzerOverhead * numNodesRepresentedByData
                 data.minimizationOverhead += node.minimizationOverhead * numNodesRepresentedByData
                 data.correctnessRate += node.correctnessRate * numNodesRepresentedByData
-                data.jitTriggerRate += node.jitTriggerRate * numNodesRepresentedByData
                 data.timeoutRate += node.timeoutRate * numNodesRepresentedByData
             }
 
@@ -124,7 +127,6 @@ public class Statistics: Module {
         data.fuzzerOverhead /= totalNumberOfNodes
         data.minimizationOverhead /= totalNumberOfNodes
         data.correctnessRate /= totalNumberOfNodes
-        data.jitTriggerRate /= totalNumberOfNodes
         data.timeoutRate /= totalNumberOfNodes
 
         return data
@@ -161,21 +163,7 @@ public class Statistics: Module {
         fuzzer.registerEventListener(for: fuzzer.events.PostExecute) { exec in
             self.ownData.totalExecs += 1
             self.currentExecs += 1
-            let stdout = exec.stdout 
-            self.jitTriggerRate.add(0.0)
-            /*
-            let pattern = #"marking .* for optimization|compiling method"#
-            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
-                let range = NSRange(stdout.startIndex..<stdout.endIndex, in: stdout)
-                if regex.firstMatch(in: stdout, options: [], range: range) != nil {
-                    self.jitTriggerRate.add(1.0)
-                }
-                else {
-                    self.jitTriggerRate.add(0.0)
-                }
-            }
-            */
-            
+
             if exec.outcome == .succeeded {
                 self.executionTimeAvg.add(exec.execTime)
             }
@@ -229,10 +217,10 @@ public class Statistics: Module {
                 let maxSamplesGeneratedStringLength = fuzzer.mutators.map({ String($0.totalSamples).count }).max()!
                 for mutator in fuzzer.mutators {
                     let name = mutator.name.rightPadded(toLength: nameMaxLength)
-                    let correctnessRate = String(format: "%.2f%%", mutator.correctnessRate * 100).leftPadded(toLength: 7)
-                    let failureRate = String(format: "%.2f%%", mutator.failureRate * 100).leftPadded(toLength: 7)
-                    let timeoutRate = String(format: "%.2f%%", mutator.timeoutRate * 100).leftPadded(toLength: 6)
-                    let interestingSamplesRate = String(format: "%.2f%%", mutator.interestingSamplesRate * 100).leftPadded(toLength: 7)
+                    let correctnessRate = Self.percentageOrNa(mutator.correctnessRate, 7)
+                    let failureRate = Self.percentageOrNa(mutator.failureRate, 7)
+                    let timeoutRate = Self.percentageOrNa(mutator.timeoutRate, 6)
+                    let interestingSamplesRate = Self.percentageOrNa(mutator.interestingSamplesRate, 7)
                     let avgInstructionsAdded = String(format: "%.2f", mutator.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
                     let samplesGenerated = String(mutator.totalSamples).leftPadded(toLength: maxSamplesGeneratedStringLength)
                     let crashesFound = mutator.crashesFound
@@ -245,14 +233,18 @@ public class Statistics: Module {
             fuzzer.timers.scheduleTask(every: 30 * Minutes) {
                 self.logger.verbose("Code Generator Statistics:")
                 let nameMaxLength = fuzzer.codeGenerators.map({ $0.name.count }).max()!
+
                 for generator in fuzzer.codeGenerators {
-                    let name = generator.name.rightPadded(toLength: nameMaxLength)
-                    let correctnessRate = String(format: "%.2f%%", generator.correctnessRate * 100).leftPadded(toLength: 7)
-                    let interestingSamplesRate = String(format: "%.2f%%", generator.interestingSamplesRate * 100).leftPadded(toLength: 7)
-                    let timeoutRate = String(format: "%.2f%%", generator.timeoutRate * 100).leftPadded(toLength: 6)
-                    let avgInstructionsAdded = String(format: "%.2f", generator.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
-                    let samplesGenerated = generator.totalSamples
-                    self.logger.verbose("    \(name) : Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")
+                    for stub in generator.parts {
+                        let name = stub.name.rightPadded(toLength: nameMaxLength)
+                        let correctnessRate = Self.percentageOrNa(stub.correctnessRate, 7)
+                        let interestingSamplesRate = Self.percentageOrNa(stub.interestingSamplesRate, 7)
+                        let timeoutRate = Self.percentageOrNa(stub.timeoutRate, 6)
+                        let avgInstructionsAdded = String(format: "%.2f", stub.avgNumberOfInstructionsGenerated).leftPadded(toLength: 5)
+                        let invocationSuccessRate = Self.percentageOrNa(stub.invocationSuccessRate, 6)
+                        let samplesGenerated = stub.totalSamples
+                        self.logger.verbose("    \(name) : Invocation Success: \(invocationSuccessRate), Correctness rate: \(correctnessRate), Interesting sample rate: \(interestingSamplesRate), Timeout rate: \(timeoutRate), Avg. # of instructions added: \(avgInstructionsAdded), Total # of generated samples: \(samplesGenerated)")
+                    }
                 }
             }
         }
@@ -267,11 +259,11 @@ public class Statistics: Module {
 extension Fuzzilli_Protobuf_Statistics {
     /// The ratio of valid samples to produced samples over the entire runtime of the fuzzer.
     public var overallCorrectnessRate: Double {
-        return Double(validSamples) / Double(totalSamples)
+        return totalSamples != 0 ? Double(validSamples) / Double(totalSamples) : 0
     }
 
     /// The ratio of timed-out samples to produced samples over the entire runtime of the fuzzer.
     public var overallTimeoutRate: Double {
-        return Double(timedOutSamples) / Double(totalSamples)
+        return totalSamples != 0 ? Double(timedOutSamples) / Double(totalSamples) : 0
     }
 }

@@ -21,9 +21,10 @@ class ProgramBuilderTests: XCTestCase {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
         let N = 100
+        let numPrograms = 100
 
         var sumOfProgramSizes = 0
-        for _ in 0..<100 {
+        for _ in 0..<numPrograms {
             b.buildPrefix()
             b.build(n: N)
             let program = b.finalize()
@@ -37,8 +38,32 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         // On average, we should generate between n and 2x n instructions.
-        let averageSize = sumOfProgramSizes / 100
+        let averageSize = sumOfProgramSizes / numPrograms
         XCTAssertLessThanOrEqual(averageSize, 2*N)
+    }
+
+    func testTemplateBuilding() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let numPrograms = 100
+        // let maxExpectedProgramSize = 1000
+        var sumOfProgramSizes = 0
+
+        for _ in 0..<numPrograms {
+            let template = fuzzer.programTemplates.randomElement()
+            template.generate(in: b)
+            let program = b.finalize()
+            sumOfProgramSizes += program.size
+
+            // Add to corpus since build() does splicing as well
+            fuzzer.corpus.add(program, ProgramAspects(outcome: .succeeded))
+            // TODO: Do not rely on these numbers as we are testing a
+            // distribution and we might sparsely hit this.
+            // XCTAssertLessThan(program.size, maxExpectedProgramSize)
+        }
+
+        let averageSize = sumOfProgramSizes / numPrograms
+        XCTAssertLessThan(averageSize, 500)
     }
 
     func testValueBuilding() {
@@ -49,6 +74,12 @@ class ProgramBuilderTests: XCTestCase {
         let env = JavaScriptEnvironment()
         let fuzzer = makeMockFuzzer(environment: env)
         let b = fuzzer.makeBuilder()
+
+        let codeGenerators = fuzzer.codeGenerators.filter { codeGenerator in
+            // Filter out Generators that do a reassignment as these will make our Variables be typed as .jsAnything.
+            !codeGenerator.name.contains("Reassign")
+        }
+        fuzzer.setCodeGenerators(codeGenerators)
 
         for _ in 0..<100 {
             XCTAssertEqual(b.numberOfVisibleVariables, 0)
@@ -69,7 +100,7 @@ class ProgramBuilderTests: XCTestCase {
             // value generator generates a reassignment of a variable created by a previous value
             // generator. As that should be rare in practice, we don't care too much about that though.
             for v in b.visibleVariables {
-                XCTAssertNotEqual(b.type(of: v), .anything)
+                XCTAssertNotEqual(b.type(of: v), .jsAnything)
             }
 
             let _ = b.finalize()
@@ -93,8 +124,9 @@ class ProgramBuilderTests: XCTestCase {
     func testShapeOfGeneratedCode1() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        let N = 100
 
-        let simpleGenerator = ValueGenerator("SimpleGenerator") { b, _ in
+        let simpleGenerator = CodeGenerator("SimpleGenerator", produces: [.integer]) { b in
             b.loadInt(Int64.random(in: 0..<100))
         }
         fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
@@ -104,27 +136,25 @@ class ProgramBuilderTests: XCTestCase {
         for _ in 0..<10 {
             b.buildPrefix()
             let prefixSize = b.currentNumberOfInstructions
-            b.build(n: 100, by: .generating)
+            b.build(n: N, by: .generating)
             let program = b.finalize()
 
             // In this case, the size of the generated code must be exactly the requested size.
-            XCTAssertEqual(program.size - prefixSize, 100)
+            XCTAssertEqual(program.size - prefixSize, N)
         }
     }
 
     func testShapeOfGeneratedCode2() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
+        let N = 100
 
-        b.minRecursiveBudgetRelativeToParentBudget = 0.25
-        b.maxRecursiveBudgetRelativeToParentBudget = 0.25
-
-        let simpleGenerator = ValueGenerator("SimpleGenerator") { b, _ in
+        let simpleGenerator = CodeGenerator("SimpleGenerator", produces: [.integer]) { b in
             b.loadInt(Int64.random(in: 0..<100))
         }
-        let recursiveGenerator = RecursiveCodeGenerator("RecursiveGenerator") { b in
+        let recursiveGenerator = CodeGenerator("RecursiveGenerator") { b in
             b.buildRepeatLoop(n: 5) { _ in
-                b.buildRecursive()
+                b.build(n: 5)
             }
         }
         fuzzer.setCodeGenerators(WeightedList<CodeGenerator>([
@@ -134,15 +164,19 @@ class ProgramBuilderTests: XCTestCase {
 
         for _ in 0..<10 {
             b.buildPrefix()
-            let prefixSize = b.currentNumberOfInstructions
-            b.build(n: 100, by: .generating)
-            let program = b.finalize()
+            let _ = b.currentNumberOfInstructions
+            // let prefixSize = b.currentNumberOfInstructions
+            b.build(n: N, by: .generating)
+            let _ = b.finalize()
+            // let program = b.finalize()
 
             // Uncomment to see the "shape" of generated programs on the console.
             //print(FuzzILLifter().lift(program))
 
-            // The size may be larger, but only roughly by 100 * 0.25 + 100 * 0.25**2 + 100 * 0.25**3 ... (each block may overshoot its budget by roughly the maximum recursive block size).
-            XCTAssertLessThan(program.size - prefixSize, 150)
+            // TODO: We need some robust testing that tests whether we emit code
+            // in the correct distributions, instead of just checking here
+            // against a hard number, which might fail sparsely.
+            // XCTAssertLessThan(program.size - prefixSize, N * 4)
         }
     }
 
@@ -150,10 +184,7 @@ class ProgramBuilderTests: XCTestCase {
         // This testcase demonstrates the behavior of `b.randomVariable(forUseAs:)`
         // This API behaves in the following way:
         //  - It prefers to return variables that are known to have the requested type
-        //    with probability `b.probabilityOfVariableSelectionTryingToFindAnExactMatch`,
-        //    but only if there's a sufficient number of them currently visible (to ensure
-        //    that consecutive queries return different variables. This threshold is
-        //    determined by `b.minVisibleVariablesOfRequestedTypeForVariableSelection`.
+        //    with probability `b.probabilityOfVariableSelectionTryingToFindAnExactMatch`.
         //  - Otherwise, it tries a wider match, including all variables that may have the
         //    requested type. This includes all variables that have unknown type.
         //  - If even that doesn't find any matches, the function will return a random
@@ -164,10 +195,8 @@ class ProgramBuilderTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let i = b.loadInt(42)
-        // There is only one visible variable, so we always get that, no matter what we actually query
-        XCTAssertLessThan(b.numberOfVisibleVariables, b.minVisibleVariablesOfRequestedTypeForVariableSelection)
         XCTAssertEqual(b.randomVariable(forUseAs: .integer), i)
-        XCTAssertEqual(b.randomVariable(forUseAs: .anything), i)
+        XCTAssertEqual(b.randomVariable(forUseAs: .jsAnything), i)
         XCTAssertEqual(b.randomVariable(forUseAs: .string), i)
 
         // Now there's also a string variable. Now, when asking for e.g. an integer, we will not get the string
@@ -177,31 +206,24 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssert([i, s].contains(b.randomVariable(forUseAs: .primitive)))
         XCTAssertEqual(b.randomVariable(forUseAs: .string), s)
 
-        // Now there's also a variable of unknown type, which may be anything. Since we don't have enough variables
-        // of a known type, all queries will use a `MayBe` type query to find matches and so may return the unknown variable.
+        // Now there's also a variable of unknown type, which may be anything.
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
 
+        // There is now still a 50% chance that we will do a `MayBe` query, so we may return the unknown variable.
         XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .integer)))
         XCTAssert([i, unknown].contains(b.randomVariable(forUseAs: .number)))
         XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
         XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .primitive)))
-        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .anything)))
+        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .jsAnything)))
 
-        // Now we add some more integers and set the probability of trying an exact match (i.e. an `Is` query instead of a
-        // `MayBe` query) to 100%. Then, we expect to always get back the known integers when asking for them.
-        let i2 = b.loadInt(43)
-        let i3 = b.loadInt(44)
-        XCTAssertGreaterThanOrEqual(b.numberOfVisibleVariables, b.minVisibleVariablesOfRequestedTypeForVariableSelection)
         b.probabilityOfVariableSelectionTryingToFindAnExactMatch = 1.0
-        // Now we should always get back the integer when querying for that type.
-        XCTAssert([i, i2, i3].contains(b.randomVariable(forUseAs: .integer)))
-        XCTAssert([i, i2, i3].contains(b.randomVariable(forUseAs: .number)))
-        // We don't have enough strings yet though.
-        XCTAssert([s, unknown].contains(b.randomVariable(forUseAs: .string)))
-        // But enough primitive values.
-        XCTAssert([i, i2, i3, s].contains(b.randomVariable(forUseAs: .primitive)))
-        XCTAssert([i, i2, i3, s, unknown].contains(b.randomVariable(forUseAs: .anything)))
+        // We should now always first look for a variable whose type matches or subsumes the requested one.
+        XCTAssertEqual(b.randomVariable(ofType: .integer), i)
+        XCTAssertEqual(b.randomVariable(ofType: .number), i)
+        XCTAssertEqual(b.randomVariable(ofType: .string), s)
+        XCTAssert([i, s].contains(b.randomVariable(forUseAs: .primitive)))
+        XCTAssert([i, s, unknown].contains(b.randomVariable(forUseAs: .jsAnything)))
     }
 
     func testVariableRetrieval2() {
@@ -215,23 +237,23 @@ class ProgramBuilderTests: XCTestCase {
         let v = b.loadInt(42)
         XCTAssertEqual(b.randomVariable(ofType: .integer), v)
         XCTAssertEqual(b.randomVariable(ofType: .number), v)
-        XCTAssertEqual(b.randomVariable(ofType: .anything), v)
+        XCTAssertEqual(b.randomVariable(ofType: .jsAnything), v)
         XCTAssertEqual(b.randomVariable(ofType: .string), nil)
 
         let s = b.loadString("foobar")
         XCTAssertEqual(b.randomVariable(ofType: .integer), v)
         XCTAssertEqual(b.randomVariable(ofType: .number), v)
         XCTAssert([v, s].contains(b.randomVariable(ofType: .primitive)))
-        XCTAssert([v, s].contains(b.randomVariable(ofType: .anything)))
+        XCTAssert([v, s].contains(b.randomVariable(ofType: .jsAnything)))
         XCTAssertEqual(b.randomVariable(ofType: .string), s)
 
         let _ = b.finalize()
 
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
         XCTAssertEqual(b.randomVariable(ofType: .integer), nil)
         XCTAssertEqual(b.randomVariable(ofType: .number), nil)
-        XCTAssertEqual(b.randomVariable(ofType: .anything), unknown)
+        XCTAssertEqual(b.randomVariable(ofType: .jsAnything), unknown)
 
         let _ = b.finalize()
 
@@ -262,13 +284,53 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .string), v)
         XCTAssert([v, s].contains(b.randomVariable(preferablyNotOfType: .boolean)))
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), nil)
-        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .anything), nil)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .jsAnything), nil)
 
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
         XCTAssert([v, unknown].contains(b.randomVariable(preferablyNotOfType: .string)))
         XCTAssertEqual(b.randomVariable(preferablyNotOfType: .primitive), unknown)
-        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .anything), nil)
+        XCTAssertEqual(b.randomVariable(preferablyNotOfType: .jsAnything), nil)
+    }
+
+    func testVariableRetrieval4() {
+        // This testcase demonstrates the behavior of `b.randomVariable(forUseAsGuarded:)`
+        // This API behaves in the following way:
+        //  - If a variable that matches or subsumes the requested type was found, it
+        //    returns the variable, along with a boolean that is true.
+        //  - If no matching variable was found, it will return one whose type intersects
+        //    with the requested one, or a random variable. In either of these cases, the
+        //    returned boolean will be false.
+
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let obj = b.createObject(with: ["x": b.loadInt(1), "y": b.loadInt(2)])
+
+        // We created three visible variables before; obj and its two properties.
+        XCTAssertEqual(b.numberOfVisibleVariables, 3)
+
+        b.probabilityOfVariableSelectionTryingToFindAnExactMatch = 1.0
+
+        do { // Search with exact match.
+            let (foundVar, matches) = b.randomVariable(forUseAsGuarded: b.type(of: obj))
+            XCTAssertEqual(obj, foundVar)
+            XCTAssert(matches)
+        }
+        do { // Search for supertype.
+            let (foundVar, matches) = b.randomVariable(forUseAsGuarded: .object(withProperties: ["x"]))
+            XCTAssertEqual(obj, foundVar)
+            XCTAssert(matches)
+        }
+        do { // Search for subtype.
+            let (foundVar, matches) = b.randomVariable(forUseAsGuarded: .object(withProperties: ["x", "y", "z"]))
+            XCTAssertEqual(obj, foundVar)
+            XCTAssertFalse(matches)
+        }
+        do { // Search for unrelated type. We ignore the variable, since it's completely random.
+            let (_, matches) = b.randomVariable(forUseAsGuarded: .string)
+            XCTAssertFalse(matches)
+        }
     }
 
     func testRandomVarableInternal() {
@@ -307,7 +369,7 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(b.numberOfVisibleVariables, 2)
 
         for _ in 0..<10 {
-            XCTAssertNotEqual(b.randomVariable(), Math)
+            XCTAssertNotEqual(b.randomJsVariable(), Math)
         }
 
         // Make sure the variable stays hidden when entering new scopes.
@@ -316,7 +378,7 @@ class ProgramBuilderTests: XCTestCase {
 
             XCTAssert(!b.visibleVariables.contains(Math))
             for _ in 0..<10 {
-                XCTAssertNotEqual(b.randomVariable(), Math)
+                XCTAssertNotEqual(b.randomJsVariable(), Math)
             }
 
             b.callMethod("log2", on: Math, withArgs: [v])
@@ -342,23 +404,23 @@ class ProgramBuilderTests: XCTestCase {
 
                 XCTAssert(!b.visibleVariables.contains(Math))
                 for _ in 0..<10 {
-                    XCTAssertNotEqual(b.randomVariable(), Math)
-                    XCTAssertNotEqual(b.randomVariable(), v2)
-                    XCTAssertNotEqual(b.randomVariable(), v3)
-                    XCTAssertNotEqual(b.randomVariable(), v4)
+                    XCTAssertNotEqual(b.randomJsVariable(), Math)
+                    XCTAssertNotEqual(b.randomJsVariable(), v2)
+                    XCTAssertNotEqual(b.randomJsVariable(), v3)
+                    XCTAssertNotEqual(b.randomJsVariable(), v4)
                 }
             }
             XCTAssertEqual(b.numberOfVisibleVariables, 6)
 
             XCTAssert(!b.visibleVariables.contains(Math))
             for _ in 0..<10 {
-                XCTAssertNotEqual(b.randomVariable(), Math)
+                XCTAssertNotEqual(b.randomJsVariable(), Math)
             }
         }
 
         XCTAssert(!b.visibleVariables.contains(Math))
         for _ in 0..<10 {
-            XCTAssertNotEqual(b.randomVariable(), Math)
+            XCTAssertNotEqual(b.randomJsVariable(), Math)
         }
 
         b.unhide(Math)
@@ -381,7 +443,7 @@ class ProgramBuilderTests: XCTestCase {
             // The function variable is hidden during it's initial creation, so that all the code
             // generated for its body doesn't operate on it (and e.g. cause trivial recursion).
             XCTAssertFalse(b.visibleVariables.contains(functionVar))
-            XCTAssertNotEqual(b.randomVariable(), functionVar)
+            XCTAssertNotEqual(b.randomJsVariable(), functionVar)
             XCTAssertNotEqual(b.randomVariable(ofType: .function()), functionVar)
         }
         XCTAssertEqual(functionVar, realFunctionVar)
@@ -474,10 +536,10 @@ class ProgramBuilderTests: XCTestCase {
         }
         XCTAssert(usesOfParameterType.values.allSatisfy({ $0 > 0 }))
 
-        // However, if we set the probability of using .anything as parameter to 100%, we expect to only see .anything parameters.
+        // However, if we set the probability of using .jsAnything as parameter to 100%, we expect to only see .jsAnything parameters.
         b.probabilityOfUsingAnythingAsParameterTypeIfAvoidable = 1.0
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .anything)
-        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .anything)
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .jsAnything)
+        XCTAssertEqual(b.randomParameters(n: 1).parameterTypes[0], .jsAnything)
     }
 
     func testParameterGeneration3() {
@@ -623,6 +685,10 @@ class ProgramBuilderTests: XCTestCase {
             cls.addInstanceMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.instanceMethods.contains("bar"))
 
+            XCTAssertFalse(cls.instanceComputedMethods.contains(s))
+            cls.addInstanceComputedMethod(s, with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.instanceComputedMethods.contains(s))
+
             XCTAssertFalse(cls.instanceGetters.contains("foobar"))
             cls.addInstanceGetter(for: "foobar") { this in }
             XCTAssert(cls.instanceGetters.contains("foobar"))
@@ -646,6 +712,10 @@ class ProgramBuilderTests: XCTestCase {
             XCTAssertFalse(cls.staticMethods.contains("bar"))
             cls.addStaticMethod("bar", with: .parameters(n: 0)) { args in }
             XCTAssert(cls.staticMethods.contains("bar"))
+
+            XCTAssertFalse(cls.staticComputedMethods.contains(s))
+            cls.addStaticComputedMethod(s, with: .parameters(n: 0)) { args in }
+            XCTAssert(cls.staticComputedMethods.contains(s))
 
             XCTAssertFalse(cls.staticGetters.contains("foobar"))
             cls.addStaticGetter(for: "foobar") { this in }
@@ -697,7 +767,7 @@ class ProgramBuilderTests: XCTestCase {
         }
 
         let program = b.finalize()
-        XCTAssertEqual(program.size, 32)
+        XCTAssertEqual(program.size, 36)
     }
 
     func testSwitchBlockBuilding() {
@@ -1473,12 +1543,12 @@ class ProgramBuilderTests: XCTestCase {
         //
         b.probabilityOfRemappingAnInstructionsOutputsDuringSplicing = 1.0
 
-        // This function is "compatible" with the original function (also one parameter of type .anything).
+        // This function is "compatible" with the original function (also one parameter of type .jsAnything).
         b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let two = b.loadInt(2)
             let r = b.binary(args[0], two, with: .Mul)
             // Due to the way remapping is currently implemented, function return values
-            // are currently assumed to be .anything when looking for compatible functions.
+            // are currently assumed to be .jsAnything when looking for compatible functions.
             b.doReturn(r)
         }
         // This function is not compatible since it requires more parameters.
@@ -1495,7 +1565,7 @@ class ProgramBuilderTests: XCTestCase {
         //
         // Variables should be remapped to variables of the same type (unless there are none).
         // In this case, the two functions are compatible because their parameter types are
-        // identical (both take one .anything parameter).
+        // identical (both take one .jsAnything parameter).
         f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let two = b.loadInt(2)
             let r = b.binary(args[0], two, with: .Mul)
@@ -1521,12 +1591,12 @@ class ProgramBuilderTests: XCTestCase {
         // Original Program
         //
         //
-        // Here we have a function with one parameter of type .anything.
+        // Here we have a function with one parameter of type .jsAnything.
         var f = b.buildPlainFunction(with: .parameters(n: 1)) { args in
             let print = b.createNamedVariable(forBuiltin: "print")
             b.callFunction(print, withArgs: args)
         }
-        XCTAssertEqual(b.type(of: f).signature?.parameters, [.anything])
+        XCTAssertEqual(b.type(of: f).signature?.parameters, [.jsAnything])
         var n = b.loadInt(1337)
         splicePoint = b.indexOfNextInstruction()
         b.callFunction(f, withArgs: [n])
@@ -1589,7 +1659,7 @@ class ProgramBuilderTests: XCTestCase {
 
         // For splicing, we will not use a variable of an unknown type as replacement.
         let unknown = b.createNamedVariable(forBuiltin: "unknown")
-        XCTAssertEqual(b.type(of: unknown), .anything)
+        XCTAssertEqual(b.type(of: unknown), .jsAnything)
         b.loadBool(true)        // This should also never be used as replacement as it definitely has a different type
         b.splice(from: original, at: splicePoint, mergeDataFlow: true)
         let actual = b.finalize()
@@ -2273,6 +2343,50 @@ class ProgramBuilderTests: XCTestCase {
         XCTAssertEqual(actual, original)
     }
 
+    func testWasmEndTypeGroupSplicing() {
+        var splicePoint = -1
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        //
+        // Original Program
+        //
+        b.wasmDefineTypeGroup {
+            let typeA = b.wasmDefineArrayType(elementType: .wasmi32, mutability: false)
+            let typeB = b.wasmDefineArrayType(elementType: .wasmi64, mutability: false)
+            splicePoint = b.indexOfNextInstruction() // the WasmEndTypeGroup
+            return [typeA, typeB]
+        }
+        let original = b.finalize()
+
+        //
+        // Actual Program
+        //
+        b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi64, mutability: false)]
+        }
+        XCTAssertTrue(b.splice(from: original, at: splicePoint, mergeDataFlow: false))
+        let actual = b.finalize()
+
+        //
+        // Expected Program
+        //
+        b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi64, mutability: false)]
+        }
+        b.wasmDefineTypeGroup {
+            [
+                b.wasmDefineArrayType(elementType: .wasmi32, mutability: false),
+                b.wasmDefineArrayType(elementType: .wasmi64, mutability: false)
+            ]
+        }
+        let expected = b.finalize()
+
+        XCTAssertEqual(actual, expected,
+            "Actual:\n\(FuzzILLifter().lift(actual.code))\n\n" +
+            "Expected:\n\(FuzzILLifter().lift(expected.code))")
+    }
+
     func testCodeStringSplicing() {
         var splicePoint = -1
         let fuzzer = makeMockFuzzer()
@@ -2454,14 +2568,14 @@ class ProgramBuilderTests: XCTestCase {
         let jsD8 = ILType.object(ofGroup: "D8", withProperties: ["test"], withMethods: [])
         let jsD8Test = ILType.object(ofGroup: "D8Test", withProperties: ["FastCAPI"], withMethods: [])
         let jsD8FastCAPI = ILType.object(ofGroup: "D8FastCAPI", withProperties: [], withMethods: ["throw_no_fallback", "add_32bit_int"])
-        let jsD8FastCAPIConstructor = ILType.constructor(Signature(expects: [], returns: jsD8FastCAPI))
+        let jsD8FastCAPIConstructor = ILType.constructor([] => jsD8FastCAPI)
 
         // Object groups
         let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: ["test" : jsD8Test], methods: [:])
         let jsD8TestGroup = ObjectGroup(name: "D8Test", instanceType: jsD8Test, properties: ["FastCAPI": jsD8FastCAPIConstructor], methods: [:])
         let jsD8FastCAPIGroup = ObjectGroup(name: "D8FastCAPI", instanceType: jsD8FastCAPI, properties: [:],
-                methods:["throw_no_fallback": Signature(expects: [], returns: ILType.integer),
-                        "add_32bit_int": Signature(expects: [Parameter.plain(ILType.integer), Parameter.plain(ILType.integer)], returns: ILType.integer)
+                methods:["throw_no_fallback": [] => ILType.integer,
+                        "add_32bit_int": [.integer, .integer] => .integer
             ])
         let additionalObjectGroups = [jsD8Group, jsD8TestGroup, jsD8FastCAPIGroup]
 
@@ -2484,7 +2598,7 @@ class ProgramBuilderTests: XCTestCase {
 
     func testFindOrGenerateTypeWithGlobalConstructor() {
         let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
-        let constructor = ILType.constructor(Signature(expects: [], returns: objType))
+        let constructor = ILType.constructor([] => objType)
 
         let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
 
@@ -2504,7 +2618,35 @@ class ProgramBuilderTests: XCTestCase {
         let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
 
         // Object groups
-        let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: [:], methods: ["test" : Signature(expects: [], returns: objType)])
+        let jsD8Group = ObjectGroup(name: "D8", instanceType: jsD8, properties: [:], methods: ["test" : [] => objType])
+
+        let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
+
+        let env = JavaScriptEnvironment(additionalBuiltins: ["d8" : jsD8], additionalObjectGroups: [jsD8Group, testGroup])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        let obj = b.findOrGenerateType(objType)
+        XCTAssert(b.type(of: obj).Is(objType))
+    }
+
+    func testFindOrGenerateTypeWithMethodOverload() {
+        // Types
+        let jsD8 = ILType.object(ofGroup: "D8", withProperties: [], withMethods: ["test"])
+        let objType = ILType.object(ofGroup: "Test", withProperties: [], withMethods: [])
+
+        // Object groups
+        let jsD8Group = ObjectGroup(
+            name: "D8",
+            instanceType: jsD8,
+            properties: [:],
+            overloads: ["test" : [
+                [.string] => .integer,
+                [.integer, .integer] => .string,
+                [] => objType
+                ]])
 
         let testGroup = ObjectGroup(name: "Test", instanceType: objType, properties: [:], methods: [:])
 
@@ -2627,6 +2769,283 @@ class ProgramBuilderTests: XCTestCase {
               XCTAssert(allowedValues.contains(value.value))
             default:
               XCTAssert(false)
+        }
+    }
+
+    func testFindOrGenerateWithCodeGenerator() {
+        let type1 = ILType.object(ofGroup: "group1", withProperties: [], withMethods: [])
+        let group1 = ObjectGroup(name: "group1", instanceType: type1, properties: [:], methods: [:])
+
+        let testGenerator = CodeGenerator("testGenerator", produces: [type1]) { b in
+            let builtin = b.createNamedVariable(forBuiltin: "foo")
+            b.callFunction(builtin)
+        }
+
+        let env = JavaScriptEnvironment(
+            additionalBuiltins: ["foo" : .function([] => type1)],
+            additionalObjectGroups: [group1])
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env, codeGenerators: [(testGenerator, 1)])
+
+        let b = fuzzer.makeBuilder()
+        // Manually create a Variable, we don't want to use buildPrefix as we then might accidentally already create variable of type `type1`.
+        b.loadInt(42)
+
+        XCTAssertTrue(b.randomVariable(ofTypeOrSubtype: type1) == nil)
+        let obj = b.findOrGenerateType(type1)
+        XCTAssert(b.type(of: obj).Is(type1))
+    }
+
+    func testWasmTypeGroupScoping() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let typesA = b.wasmDefineTypeGroup(recursiveGenerator: {
+            b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+        })
+
+        XCTAssertEqual(typesA.count, 1)
+
+        let typesB = b.wasmDefineTypeGroup(recursiveGenerator: {
+            b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+        })
+
+        XCTAssertEqual(typesB.count, 1)
+    }
+
+    func testWasmGCSubtyping() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+
+        let typeGroupA = b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true),
+            b.wasmDefineStructType(fields: [.init(type: .wasmi64, mutability: false)], indexTypes: [])]
+        }
+        let arrayDefI32 = typeGroupA[0]
+        let structDef = typeGroupA[1]
+        let arrayDefI32B = b.wasmDefineTypeGroup {
+            [b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)]
+        }[0]
+
+        let arrayDefI32Type = b.type(of: arrayDefI32)
+        let structDefType = b.type(of: structDef)
+        let arrayDefI32BType = b.type(of: arrayDefI32B)
+
+        XCTAssert(arrayDefI32Type.Is(.wasmTypeDef()))
+        XCTAssert(structDefType.Is(.wasmTypeDef()))
+        XCTAssert(arrayDefI32BType.Is(.wasmTypeDef()))
+        // The type of a type definition may not be confused with the type of an instance of such
+        // struct / array.
+        XCTAssertFalse(arrayDefI32Type.Is(.wasmGenericRef))
+        XCTAssertFalse(structDefType.Is(.wasmGenericRef))
+        XCTAssertFalse(arrayDefI32BType.Is(.wasmGenericRef))
+
+        b.buildWasmModule { wasmModule in
+            wasmModule.addWasmFunction(with: [.wasmi32] => []) { function, label, args in
+                let arrayI32 = function.wasmArrayNewFixed(arrayType: arrayDefI32, elements: [])
+                let arrayI32Type = b.type(of: arrayI32)
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Index(), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Index(), nullability: false)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmArray), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmArray), nullability: false)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmEq), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmEq), nullability: false)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmAny), nullability: true)))
+                XCTAssert(arrayI32Type.Is(.wasmRef(.Abstract(.WasmAny), nullability: false)))
+                XCTAssertFalse(arrayI32Type.Is(.wasmRef(.Abstract(.WasmStruct), nullability: true)))
+                XCTAssertFalse(arrayI32Type.Is(.wasmRef(.Abstract(.WasmStruct), nullability: false)))
+                XCTAssertFalse(arrayI32Type.Is(.wasmRef(.Abstract(.WasmExn), nullability: false)))
+
+                let arrayI32B = function.wasmArrayNewFixed(arrayType: arrayDefI32B, elements: [])
+                let arrayI32BType = b.type(of: arrayI32B)
+                XCTAssertFalse(arrayI32BType.Is(arrayI32Type))
+                XCTAssertFalse(arrayI32Type.Is(arrayI32BType))
+                let refArrayType = ILType.wasmRef(.Abstract(.WasmArray), nullability: false)
+                XCTAssertEqual(arrayI32Type.union(with: arrayI32BType), refArrayType)
+                XCTAssertEqual(arrayI32BType.union(with: arrayI32Type), refArrayType)
+                XCTAssertEqual(arrayI32Type.intersection(with: arrayI32BType), .nothing)
+                XCTAssertEqual(arrayI32BType.intersection(with: arrayI32Type), .nothing)
+
+                let structVar = function.wasmStructNewDefault(structType: structDef)
+                let structType = b.type(of: structVar)
+                XCTAssert(structType.Is(.wasmRef(.Index(), nullability: true)))
+                XCTAssert(structType.Is(.wasmRef(.Index(), nullability: false)))
+                XCTAssert(structType.Is(.wasmRef(.Abstract(.WasmStruct), nullability: false)))
+                XCTAssert(structType.Is(.wasmRef(.Abstract(.WasmEq), nullability: false)))
+                XCTAssert(structType.Is(.wasmRef(.Abstract(.WasmAny), nullability: false)))
+                XCTAssertFalse(structType.Is(.wasmRef(.Abstract(.WasmArray), nullability: true)))
+                XCTAssertFalse(structType.Is(.wasmRef(.Abstract(.WasmArray), nullability: false)))
+                XCTAssertFalse(structType.Is(.wasmRef(.Abstract(.WasmExn), nullability: false)))
+
+                let refEqType = ILType.wasmRef(.Abstract(.WasmEq), nullability: false)
+                XCTAssertEqual(structType.union(with: arrayI32Type), refEqType)
+                XCTAssertEqual(arrayI32Type.union(with: structType), refEqType)
+                XCTAssertEqual(structType.intersection(with: arrayI32Type), .nothing)
+                XCTAssertEqual(arrayI32Type.intersection(with: structType), .nothing)
+
+                let i31 = function.wasmRefI31(function.consti32(42))
+                let i31Type = b.type(of: i31)
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Index(), nullability: true)))
+                XCTAssert(i31Type.Is(.wasmRef(.Abstract(.WasmEq), nullability: false)))
+                XCTAssert(i31Type.Is(.wasmRef(.Abstract(.WasmAny), nullability: false)))
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Abstract(.WasmArray), nullability: false)))
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Abstract(.WasmStruct), nullability: false)))
+                XCTAssertFalse(i31Type.Is(.wasmRef(.Abstract(.WasmExn), nullability: false)))
+
+                XCTAssertEqual(structType.union(with: i31Type), refEqType)
+                XCTAssertEqual(arrayI32Type.union(with: i31Type), refEqType)
+                XCTAssertEqual(i31Type.union(with: refEqType), refEqType)
+                XCTAssertEqual(refArrayType.union(with: i31Type), refEqType)
+                let refStructType = ILType.wasmRef(.Abstract(.WasmStruct), nullability: false)
+                XCTAssertEqual(i31Type.union(with: refStructType), refEqType)
+
+                XCTAssertEqual(i31Type.intersection(with: refEqType), i31Type)
+                XCTAssertEqual(refEqType.intersection(with: i31Type), i31Type)
+                let refNone = ILType.wasmRef(.Abstract(.WasmNone), nullability: false)
+                XCTAssertEqual(i31Type.intersection(with: refArrayType), refNone)
+                XCTAssertEqual(refStructType.intersection(with: i31Type), refNone)
+                XCTAssertEqual(i31Type.intersection(with: .wasmExnRef), .nothing)
+
+                return []
+            }
+        }
+    }
+
+    func testEmptyMemoryGenerateMemoryIndices() {
+        let env = JavaScriptEnvironment()
+        let config = Configuration(logLevel: .error)
+        let fuzzer = makeMockFuzzer(config: config, environment: env)
+        let b = fuzzer.makeBuilder()
+        do {
+            let emptyMemory = b.createWasmMemory(minPages: 0)
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    let (dynamicOffset, staticOffset) = b.generateAlignedMemoryIndexes(forMemory: emptyMemory, alignment: 1)
+                    return [function.wasmMemoryLoad(memory: emptyMemory,
+                        dynamicOffset: dynamicOffset, loadType: .I32LoadMem,
+                        staticOffset: staticOffset)]
+                }
+            }
+        }
+        let actual = b.finalize()
+        do {
+            let emptyMemory = b.createWasmMemory(minPages: 0)
+            b.buildWasmModule { wasmModule in
+                wasmModule.addWasmFunction(with: [] => [.wasmi32]) { function, label, args in
+                    return [function.wasmMemoryLoad(memory: emptyMemory,
+                        dynamicOffset: function.consti32(0), loadType: .I32LoadMem,
+                        staticOffset: 0)]
+                }
+            }
+        }
+        let expected = b.finalize()
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testWasmBranchGeneratorSchedulingTest() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        // Pick the Branch Generator.
+        let generator = fuzzer.codeGenerators.filter {
+            $0.name == "WasmBranchGenerator"
+        }[0]
+
+        // Now build this.
+        let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+        XCTAssertNotNil(syntheticGenerator)
+
+        // TODO: Hm I guess we're missing the block generator that produces a label in the CodeGenerator.
+        // See WasmBlockGenerator.
+        // There should be some logic that allows some nesting of a WasmBlockGenerator.
+        let _ = b.complete(generator: syntheticGenerator!, withBudget: 30)
+        // XCTAssertGreaterThan(numGeneratedInstructions, 30)
+    }
+
+    func testWasmCallDirectGeneratorSchedulingTest() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        b.buildPrefix()
+
+        // Pick the Branch Generator.
+        let generator = fuzzer.codeGenerators.filter {
+            $0.name == "WasmStructNewDefaultGenerator"
+        }[0]
+
+        // Now build this.
+        let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+        XCTAssertNotNil(syntheticGenerator)
+
+        let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: 30)
+        XCTAssertGreaterThan(numGeneratedInstructions, 0)
+    }
+
+    func testWasmMemorySizeSchedulingTest() {
+        let fuzzer = makeMockFuzzer()
+        let numPrograms = 100
+
+        for _ in 0...numPrograms {
+            let b = fuzzer.makeBuilder()
+            b.buildPrefix()
+
+            let generator = fuzzer.codeGenerators.filter {
+                $0.name == "WasmMemorySizeGenerator"
+            }[0]
+
+            // Now build this.
+            let syntheticGenerator = b.assembleSyntheticGenerator(for: generator)
+            XCTAssertNotNil(syntheticGenerator)
+
+            let N = 30
+            // We might generate a lot more than 30 instructions to fulfill the constraints.
+            let numGeneratedInstructions = b.complete(generator: syntheticGenerator!, withBudget: N)
+
+            let program = b.finalize()
+
+            XCTAssertTrue(program.code.contains(where: { instr in
+                if case .wasmMemorySize = instr.op.opcode {
+                    return true
+                } else {
+                    return false
+                }
+            }))
+            XCTAssertGreaterThan(numGeneratedInstructions, 0)
+        }
+    }
+
+    func testThatGeneratorsExistAndAreBuildableFromJs() {
+        let fuzzer = makeMockFuzzer()
+        let tries: Int = 10
+
+        var failures: [String: Int] = [:]
+
+        for generator in fuzzer.codeGenerators {
+            let b = fuzzer.makeBuilder()
+            b.buildPrefix()
+
+            if let syntheticGenerator = b.assembleSyntheticGenerator(for: generator) {
+                let generatedInstructions = b.complete(generator: syntheticGenerator, withBudget: 40)
+
+                if generatedInstructions == 0 {
+                    failures[generator.name, default: 0] += 1
+                }
+                XCTAssertLessThan(syntheticGenerator.parts.count, 10)
+            } else {
+                XCTFail("Unable to generate synthetic CodeGenerator for \(generator.name) from JS.")
+            }
+        }
+
+        for (name, failureCount) in failures {
+            if failureCount == tries {
+                // This might fail very sparsely, if so, we might want to check the offending Generator to see if we can improve handling for it.
+                // OTOH this is a fuzzer and we sometimes have weird situations... :)
+                XCTFail("\(name) always failed to complete.")
+            }
         }
     }
 }

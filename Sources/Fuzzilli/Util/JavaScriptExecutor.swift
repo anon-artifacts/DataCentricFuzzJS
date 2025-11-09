@@ -14,6 +14,10 @@
 
 import Foundation
 
+#if os(Windows)
+import WinSDK
+#endif /* os(Windows) */
+
 public class JavaScriptExecutor {
     /// Path to the js shell binary.
     let executablePath: String
@@ -34,9 +38,12 @@ public class JavaScriptExecutor {
 
     let arguments: [String]
 
+    let env: [(String, String)]
+
     /// Depending on the type this constructor will try to find the requested shell or fail
-    public init?(type: ExecutorType = .any, withArguments maybeArguments: [String]? = nil) {
+    public init?(type: ExecutorType = .any, withArguments maybeArguments: [String]? = nil, withEnv maybeEnv: [(String, String)]? = nil) {
         self.arguments = maybeArguments ?? []
+        self.env = maybeEnv ?? []
         let path: String?
 
         switch type {
@@ -55,18 +62,24 @@ public class JavaScriptExecutor {
         self.executablePath = path!
     }
 
+    public init(withExecutablePath executablePath: String, arguments: [String], env: [(String, String)]) {
+        self.executablePath = executablePath
+        self.arguments = arguments
+        self.env = env
+    }
+
     /// Executes the JavaScript script using the configured engine and returns the stdout.
     public func executeScript(_ script: String, withTimeout timeout: TimeInterval? = nil) throws -> Result {
-        return try execute(executablePath, withInput: prefix + script.data(using: .utf8)!, withArguments: self.arguments, timeout: timeout)
+        return try execute(executablePath, withInput: prefix + script.data(using: .utf8)!, withArguments: self.arguments, withEnv: self.env, timeout: timeout)
     }
 
     /// Executes the JavaScript script at the specified path using the configured engine and returns the stdout.
     public func executeScript(at url: URL, withTimeout timeout: TimeInterval? = nil) throws -> Result {
         let script = try Data(contentsOf: url)
-        return try execute(executablePath, withInput: prefix + script, withArguments: self.arguments, timeout: timeout)
+        return try execute(executablePath, withInput: prefix + script, withArguments: self.arguments, withEnv: self.env, timeout: timeout)
     }
 
-    func execute(_ path: String, withInput input: Data = Data(), withArguments arguments: [String] = [], timeout maybeTimeout: TimeInterval? = nil) throws -> Result {
+    func execute(_ path: String, withInput input: Data = Data(), withArguments arguments: [String] = [], withEnv env: [(String, String)] = [], timeout maybeTimeout: TimeInterval? = nil) throws -> Result {
         let inputPipe = Pipe()
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -80,6 +93,8 @@ public class JavaScriptExecutor {
         // Close stdin
         try inputPipe.fileHandleForWriting.close()
 
+        let environment = ProcessInfo.processInfo.environment.merging(env, uniquingKeysWith: { _, new in new })
+
         // Execute the subprocess.
         let task = Process()
         task.standardOutput = outputPipe
@@ -87,6 +102,7 @@ public class JavaScriptExecutor {
         task.arguments = arguments + [url.path]
         task.executableURL = URL(fileURLWithPath: path)
         task.standardInput = inputPipe
+        task.environment = environment
         try task.run()
 
         var timedOut = false
@@ -98,11 +114,21 @@ public class JavaScriptExecutor {
                     break
                 }
             }
-            if task.isRunning {
+            runningCheck: if task.isRunning {
+                timedOut = true
+#if os(Windows)
+                guard let processHandle = OpenProcess(DWORD(PROCESS_TERMINATE), false, DWORD(task.processIdentifier)) else {
+                    // Fall back to built-in termination
+                    task.terminate()
+                    break runningCheck
+                }
+                defer { CloseHandle(processHandle) }
+                TerminateProcess(processHandle, 1)
+#else
                 // Properly kill the task now with SIGKILL as it might be stuck
                 // in Wasm, where SIGTERM is not enough.
                 kill(task.processIdentifier, SIGKILL)
-                timedOut = true
+#endif /* os(Windows) */
             }
         }
 

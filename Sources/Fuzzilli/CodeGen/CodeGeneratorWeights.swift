@@ -35,6 +35,7 @@ public let codeGeneratorWeights = [
     "ObjectConstructorGenerator":               10,
     "ClassDefinitionGenerator":                 20,
     "TrivialFunctionGenerator":                 10,
+    "TimeZoneIdGenerator":                      5,
 
     // Regular code generators.
     "ThisGenerator":                            3,
@@ -42,9 +43,14 @@ public let codeGeneratorWeights = [
     "FunctionWithArgumentsAccessGenerator":     2,
     "BuiltinGenerator":                         10,
     "BuiltinOverwriteGenerator":                3,
+    "BuiltinObjectPrototypeCallGenerator":      5,
+    "BuiltinTemporalGenerator":                 4,
+    "BuiltinIntlGenerator":                     4,
     "LoadNewTargetGenerator":                   3,
     "DisposableVariableGenerator":              5,
     "AsyncDisposableVariableGenerator":         5,
+    "HexGenerator":                             2,
+    "Base64Generator":                          2,
 
     "ObjectLiteralGenerator":                   10,
     // The following generators determine how frequently different
@@ -58,14 +64,15 @@ public let codeGeneratorWeights = [
     "ObjectLiteralComputedMethodGenerator":     3,
     "ObjectLiteralGetterGenerator":             3,
     "ObjectLiteralSetterGenerator":             3,
-
-    // The following generators determine how frequently different
-    // types of fields are generated in class definitions.
-    "ClassConstructorGenerator":                10,   // Will only run if no constructor exists yet
+//
+//    // The following generators determine how frequently different
+//    // types of fields are generated in class definitions.
+    "ClassConstructorGenerator":                10,
     "ClassInstancePropertyGenerator":           5,
     "ClassInstanceElementGenerator":            5,
     "ClassInstanceComputedPropertyGenerator":   5,
     "ClassInstanceMethodGenerator":             10,
+    "ClassInstanceComputedMethodGenerator":     5,
     "ClassInstanceGetterGenerator":             3,
     "ClassInstanceSetterGenerator":             3,
     "ClassStaticPropertyGenerator":             3,
@@ -73,6 +80,7 @@ public let codeGeneratorWeights = [
     "ClassStaticComputedPropertyGenerator":     3,
     "ClassStaticInitializerGenerator":          3,
     "ClassStaticMethodGenerator":               5,
+    "ClassStaticComputedMethodGenerator":       3,
     "ClassStaticGetterGenerator":               2,
     "ClassStaticSetterGenerator":               2,
     "ClassPrivateInstancePropertyGenerator":    5,
@@ -98,6 +106,7 @@ public let codeGeneratorWeights = [
     "YieldEachGenerator":                       5,
     "AwaitGenerator":                           2,
     "PropertyRetrievalGenerator":               20,
+    "MethodAsPropertyRetrievalGenerator":       10,
     "PropertyAssignmentGenerator":              20,
     "PropertyUpdateGenerator":                  10,
     "PropertyRemovalGenerator":                 5,
@@ -136,6 +145,10 @@ public let codeGeneratorWeights = [
     "WithStatementGenerator":                   3,
     "ComparisonGenerator":                      10,
     "SuperMethodCallGenerator":                 20,
+    "UnboundFunctionCallGenerator":             10,
+    "UnboundFunctionApplyGenerator":            10,
+    "UnboundFunctionBindGenerator":             10,
+    "FunctionBindGenerator":                    10,
 
     // These will only be used inside class methods, and only if private properties were previously declared in that class.
     "PrivatePropertyRetrievalGenerator":        30,
@@ -166,7 +179,9 @@ public let codeGeneratorWeights = [
     "SwitchCaseBreakGenerator":                 5,
     "LoopBreakGenerator":                       5,
     "ContinueGenerator":                        5,
+    "TryCatchFinallyGenerator":                 5,
     "TryCatchGenerator":                        5,
+    "TryFinallyGenerator":                      5,
     "ThrowGenerator":                           1,
     "BlockStatementGenerator":                  1,
 
@@ -210,10 +225,27 @@ public let codeGeneratorWeights = [
     // As they all require .wasm context.
     "WasmModuleGenerator":                      35,
     "WasmDefineMemoryGenerator":                8,
+    "WasmDefineDataSegmentGenerator":           8,
+    "WasmDropDataSegmentGenerator":             5,
     "WasmMemoryLoadGenerator":                  10,
     "WasmMemoryStoreGenerator":                 10,
+    "WasmAtomicLoadGenerator":                  10,
+    "WasmAtomicStoreGenerator":                 10,
+    "WasmAtomicRMWGenerator":                   10,
+    "WasmAtomicCmpxchgGenerator":               10,
+    "WasmMemorySizeGenerator":                  5,
+    "WasmMemoryGrowGenerator":                  1,
+    "WasmMemoryCopyGenerator":                  5,
+    "WasmMemoryFillGenerator":                  5,
+    "WasmMemoryInitGenerator":                  5,
     "WasmDefineGlobalGenerator":                2,
     "WasmDefineTableGenerator":                 2,
+    // TODO(427115604): update onece both init and copy instructions are implemented.
+    "WasmDefineElementSegmentGenerator":        1,
+    // TODO(427115604): update onece both init and copy instructions are implemented.
+    "WasmDropElementSegmentGenerator":          1,
+    "WasmTableSizeGenerator":                   5,
+    "WasmTableGrowGenerator":                   1,
     "WasmGlobalStoreGenerator":                 2,
     "WasmGlobalLoadGenerator":                  2,
     "WasmReassignmentGenerator":                2,
@@ -278,21 +310,56 @@ public let codeGeneratorWeights = [
     "WasmLegacyTryCatchWithResultGenerator":    8,
     "WasmLegacyTryDelegateGenerator":           8,
     "WasmThrowGenerator":                       2,
-    "WasmRethrowGenerator":                     10,
+    "WasmLegacyRethrowGenerator":               10,
+    "WasmThrowRefGenerator":                    6,
     "WasmBranchGenerator":                      6,
     "WasmBranchIfGenerator":                    6,
+    "WasmBranchTableGenerator":                 6,
+    "WasmTryTableGenerator":                    6,
     "WasmJsCallGenerator":                      30,
+    "WasmCallIndirectGenerator":                5,
+    "WasmCallDirectGenerator":                  10,
+    "WasmReturnCallDirectGenerator":            10,
+    "WasmReturnCallIndirectGenerator":          10,
 
     // Simd Generators
     "ConstSimd128Generator":                    5,
     "WasmSimd128IntegerUnOpGenerator":          5,
     "WasmSimd128IntegerBinOpGenerator":         5,
+    "WasmSimd128IntegerTernaryOpGenerator":     2,
     "WasmSimd128FloatUnOpGenerator":            5,
     "WasmSimd128FloatBinOpGenerator":           5,
+    "WasmSimd128FloatTernaryOpGenerator":       2,
     "WasmSimd128CompareGenerator":              5,
-    "WasmI64x2SplatGenerator":                  5,
-    "WasmI64x2ExtractLaneGenerator":            5,
+    "WasmSimdSplatGenerator":                   5,
+    "WasmSimdExtractLaneGenerator":             5,
+    "WasmSimdReplaceLaneGenerator":             5,
+    "WasmSimdStoreLaneGenerator":               5,
+    "WasmSimdLoadLaneGenerator":                5,
     "WasmSimdLoadGenerator":                    5,
 
     "WasmSelectGenerator":                      10,
+
+    // Wasm-gc type generators
+    // These run in the javascript context and define types to be used within wasm modules.
+    "WasmTypeGroupGenerator":                   5,
+    "WasmArrayTypeGenerator":                   5,
+    "WasmStructTypeGenerator":                  5,
+    "WasmSelfReferenceGenerator":               5,
+    "WasmForwardReferenceGenerator":            5,
+
+    // Wasm-gc generators
+    "WasmArrayNewGenerator":                    5,
+    "WasmArrayLengthGenerator":                 5,
+    "WasmArrayGetGenerator":                    5,
+    "WasmArraySetGenerator":                    5,
+    "WasmStructNewDefaultGenerator":            5,
+    "WasmStructGetGenerator":                   5,
+    "WasmStructSetGenerator":                   5,
+    "WasmRefNullGenerator":                     5,
+    "WasmRefIsNullGenerator":                   5,
+    "WasmRefI31Generator":                      5,
+    "WasmI31GetGenerator":                      5,
+    "WasmAnyConvertExternGenerator":            5,
+    "WasmExternConvertAnyGenerator":            5,
 ]

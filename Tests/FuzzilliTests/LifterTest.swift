@@ -446,6 +446,40 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testForceVariableDefinitions() {
+        let createProgram = {(config: Configuration) in
+            let fuzzer = makeMockFuzzer(config: config)
+            let b = fuzzer.makeBuilder()
+            let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
+            b.getProperty("prototype", of: dateBuiltin)
+            let array = b.createNamedVariable(forBuiltin: "Array")
+            let _ = b.construct(array)
+
+            let program = b.finalize()
+            return fuzzer.lifter.lift(program)
+        }
+        do {
+            let config = Configuration(logLevel: .warning)
+            let actual = createProgram(config)
+            let expected = """
+            Date.prototype;
+            new Array();
+
+            """
+            XCTAssertEqual(actual, expected)
+        }
+        do {
+            let config = Configuration(logLevel: .warning, forDifferentialFuzzing: true)
+            let actual = createProgram(config)
+            let expected = """
+            const v1 = Date.prototype;
+            const v3 = new Array();
+
+            """
+            XCTAssertEqual(actual, expected)
+        }
+    }
+
     func testIdentifierLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -484,7 +518,7 @@ class LifterTests: XCTestCase {
         let null = b.loadNull()
         let v4 = b.binary(v3, v1, with: .Add)
         let otherObject = b.createNamedVariable(forBuiltin: "SomeObject")
-        let toPrimitive = b.getProperty("toPrimitive", of: b.createNamedVariable(forBuiltin: "Symbol"))
+        let toPrimitive = b.createSymbolProperty("toPrimitive")
         b.buildObjectLiteral { obj in
             obj.addProperty("p1", as: v1)
             obj.addProperty("__proto__", as: null)
@@ -619,6 +653,8 @@ class LifterTests: XCTestCase {
         let two = b.loadInt(2)
         let baz = b.loadString("baz")
         let baz42 = b.binary(baz, i, with: .Add)
+        let toPrimitive = b.createSymbolProperty("toPrimitive")
+        let sm = b.loadString("sm")
         let C = b.buildClassDefinition() { cls in
             cls.addInstanceProperty("foo")
             cls.addInstanceProperty("bar", value: baz)
@@ -632,6 +668,11 @@ class LifterTests: XCTestCase {
                 b.setProperty("foo", of: this, to: params[1])
             }
             cls.addInstanceMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.getProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+            cls.addInstanceComputedMethod(toPrimitive, with: .parameters(n: 0)) { params in
                 let this = params[0]
                 let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
@@ -653,6 +694,11 @@ class LifterTests: XCTestCase {
             cls.addStaticComputedProperty(baz42)
             cls.addStaticComputedProperty(two, value: baz42)
             cls.addStaticMethod("m", with: .parameters(n: 0)) { params in
+                let this = params[0]
+                let foo = b.getProperty("foo", of: this)
+                b.doReturn(foo)
+            }
+            cls.addInstanceComputedMethod(sm, with: .parameters(n: 0)) { params in
                 let this = params[0]
                 let foo = b.getProperty("foo", of: this)
                 b.doReturn(foo)
@@ -698,7 +744,8 @@ class LifterTests: XCTestCase {
 
         let expected = """
         const v3 = "baz" + 42;
-        class C4 {
+        const v5 = Symbol.toPrimitive;
+        class C7 {
             foo;
             bar = "baz";
             0 = 42;
@@ -706,16 +753,19 @@ class LifterTests: XCTestCase {
             [-1];
             [v3];
             [2] = v3;
-            constructor(a6) {
-                this.foo = a6;
+            constructor(a9) {
+                this.foo = a9;
             }
             m() {
+                return this.foo;
+            }
+            [v5]() {
                 return this.foo;
             }
             get baz() {
                 return 1337;
             }
-            set baz(a12) {
+            set baz(a17) {
             }
             static foo;
             static {
@@ -730,36 +780,90 @@ class LifterTests: XCTestCase {
             static m() {
                 return this.foo;
             }
+            ["sm"]() {
+                return this.foo;
+            }
             static get baz() {
                 return 1337;
             }
-            static set baz(a19) {
+            static set baz(a26) {
             }
             #ifoo;
             #ibar = "baz";
             #im() {
-                const v21 = this.#ifoo;
-                this.#ibar = v21;
-                return v21;
+                const v28 = this.#ifoo;
+                this.#ibar = v28;
+                return v28;
             }
-            #in(a23) {
+            #in(a30) {
                 this.#im();
-                this.#ibar += a23;
+                this.#ibar += a30;
             }
             static #sfoo;
             static #sbar = "baz";
             static #sm() {
-                const v26 = this.#sfoo;
-                this.#sbar = v26;
-                return v26;
+                const v33 = this.#sfoo;
+                this.#sbar = v33;
+                return v33;
             }
-            static #sn(a28) {
+            static #sn(a35) {
                 this.#sm();
-                this.#sbar += a28;
+                this.#sbar += a35;
             }
         }
-        new C4(42);
-        C4 = Uint8Array;
+        new C7(42);
+        C7 = Uint8Array;
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testClassExpressionLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let C = b.buildClassDefinition(isExpression: true) { cls in
+            cls.addInstanceElement(1)
+        }
+
+        let D = b.createNamedVariable("d", declarationMode: .let, initialValue: C)
+        b.construct(C, withArgs: [])
+        b.construct(D, withArgs: [])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v0 = class {
+            1;
+        }
+        let d = v0;
+        new v0();
+        new d();
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testClassExpressionWithSuperClassLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let C = b.buildClassDefinition(isExpression: true) { _ in }
+        let D = b.buildClassDefinition(withSuperclass: C, isExpression: true) { _ in }
+        b.construct(D, withArgs: [])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v0 = class {
+        }
+        const v1 = class extends v0 {
+        }
+        new v1();
 
         """
 
@@ -1648,6 +1752,46 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    func testFunctionBindLifting() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+        let indexOfSig = [.jsAnything, .opt(.integer)] => .integer
+
+        let arrayBuiltin = b.createNamedVariable(forBuiltin: "Array")
+        let arrayProto = b.getProperty("prototype", of: arrayBuiltin)
+        let indexOf = b.getProperty("indexOf", of: arrayProto)
+        XCTAssertEqual(b.type(of: indexOf), .unboundFunction(indexOfSig, receiver: .jsArray))
+        let indexOfNothingBound = b.bindFunction(indexOf, boundArgs: [])
+        XCTAssertEqual(b.type(of: indexOfNothingBound), b.type(of: indexOf))
+        let array = b.construct(arrayBuiltin)
+        let indexOfBoundThis = b.bindFunction(indexOf, boundArgs: [array])
+        XCTAssertEqual(b.type(of: indexOfBoundThis), .function(indexOfSig))
+        let str = b.loadString("value")
+        let indexOfBoundThisAndArg = b.bindFunction(indexOf, boundArgs: [array, str])
+        XCTAssertEqual(b.type(of: indexOfBoundThisAndArg), .function([.opt(.integer)] => .integer))
+        let int = b.loadInt(1)
+        let indexOfBoundAll = b.bindFunction(indexOf, boundArgs: [array, str, int])
+        XCTAssertEqual(b.type(of: indexOfBoundAll), .function([] => .integer))
+        let indexOfBoundTooMuch = b.bindFunction(indexOf, boundArgs: [array, str, int, int])
+        XCTAssertEqual(b.type(of: indexOfBoundTooMuch), .function([] => .integer))
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v2 = Array.prototype.indexOf;
+        let v3 = v2.bind();
+        const v4 = new Array();
+        let v5 = v2.bind(v4);
+        let v7 = v2.bind(v4, "value");
+        let v9 = v2.bind(v4, "value", 1);
+        let v10 = v2.bind(v4, "value", 1, 1);
+
+        """
+
+        XCTAssertEqual(actual, expected)
+    }
+
     func testMethodCallWithSpreadLifting() {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
@@ -1681,8 +1825,7 @@ class LifterTests: XCTestCase {
         let b = fuzzer.makeBuilder()
 
         let s = b.loadString("Hello World")
-        let Symbol = b.createNamedVariable(forBuiltin: "Symbol")
-        let iterator = b.getProperty("iterator", of: Symbol)
+        let iterator = b.createSymbolProperty("iterator")
         let r = b.callComputedMethod(iterator, on: s)
         b.callMethod("next", on: r)
 
@@ -3013,21 +3156,26 @@ class LifterTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
-    func testLoadDisposableVariableLifting() {
+    // This test is parameterized for normal and named variables with the
+    // respective concrete cases below.
+    func _testDisposableVariableLifting(_ variableName : String, generateVariable: (ProgramBuilder, Variable) -> Void) {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let f = b.buildPlainFunction(with: .parameters(n: 0)) { args in
             let v1 = b.loadInt(1)
             let v2 = b.loadInt(42)
-            let dispose = b.getProperty("dispose", of: b.createNamedVariable(forBuiltin: "Symbol"));
+            let numVariables = b.numberOfVisibleVariables
+            let dispose = b.createSymbolProperty("dispose");
+            // Test that the intermediate variable for "Symbol" stays hidden.
+            XCTAssertEqual(b.numberOfVisibleVariables, numVariables + 1)
             let disposableVariable = b.buildObjectLiteral { obj in
                 obj.addProperty("value", as: v1)
                 obj.addComputedMethod(dispose, with: .parameters(n:0)) { args in
                     b.doReturn(v2)
                 }
             }
-            b.loadDisposableVariable(disposableVariable)
+            generateVariable(b, disposableVariable)
         }
         b.callFunction(f)
 
@@ -3043,29 +3191,43 @@ class LifterTests: XCTestCase {
                     return 42;
                 },
             };
-            using v7 = v6;
+            using %@ = v6;
         }
         f0();
 
         """
-        XCTAssertEqual(actual, expected)
+        XCTAssertEqual(actual, String(format: expected, variableName))
     }
 
-    func testLoadAsyncDisposableVariableLifting() {
+    func testLoadDisposableVariableLifting() {
+        _testDisposableVariableLifting("v7", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.loadDisposableVariable(v)
+        })
+    }
+
+    func testCreateNamedDisposableVariableLifting() {
+        _testDisposableVariableLifting("dis", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.createNamedDisposableVariable("dis", v)
+        })
+    }
+
+    // This test is parameterized for normal and named variables with the
+    // respective concrete cases below.
+    func _testAsyncDisposableVariableLifting(_ variableName : String, generateVariable: (ProgramBuilder, Variable) -> Void) {
         let fuzzer = makeMockFuzzer()
         let b = fuzzer.makeBuilder()
 
         let f = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
             let v1 = b.loadInt(1)
             let v2 = b.loadInt(42)
-            let asyncDispose = b.getProperty("asyncDispose", of: b.createNamedVariable(forBuiltin: "Symbol"))
+            let asyncDispose = b.createSymbolProperty("asyncDispose")
             let asyncDisposableVariable = b.buildObjectLiteral { obj in
                 obj.addProperty("value", as: v1)
                 obj.addComputedMethod(asyncDispose, with: .parameters(n:0)) { args in
                     b.doReturn(v2)
                 }
             }
-            b.loadAsyncDisposableVariable(asyncDisposableVariable)
+            generateVariable(b, asyncDisposableVariable)
         }
 
         let g = b.buildAsyncFunction(with: .parameters(n: 0)) { args in
@@ -3085,12 +3247,153 @@ class LifterTests: XCTestCase {
                     return 42;
                 },
             };
-            await using v7 = v6;
+            await using %@ = v6;
         }
         async function f8() {
             await f0();
         }
         f8();
+
+        """
+        XCTAssertEqual(actual, String(format: expected, variableName))
+    }
+
+    func testLoadAsyncDisposableVariableLifting() {
+        _testAsyncDisposableVariableLifting("v7", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.loadAsyncDisposableVariable(v)
+        })
+    }
+
+    func testCreateNamedAsyncDisposableVariableLifting() {
+        _testAsyncDisposableVariableLifting("dis", generateVariable: { (b: ProgramBuilder, v: Variable) in
+            b.createNamedAsyncDisposableVariable("dis", v)
+        })
+    }
+
+    func testImportAnalysisMisTypedJS() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let table = b.createWasmTable(elementType: .wasmFuncRef, limits: Limits(min: 1), isTable64: true)
+        XCTAssertTrue(b.type(of: table).Is(.object(ofGroup: "WasmTable")))
+
+        let f = b.buildPlainFunction(with: .parameters(n: 0)) {_ in
+            b.doReturn(b.loadInt(1))
+        }
+
+        let mutationIndex = b.indexOfNextInstruction()
+        // We will mutate this to reassign table to be f.
+        // The steps for this to happen during fuzzing are as follows, we emit all of this during generation time, then we emit this reassign later, e.g. during CodeGenMutation or we change an existing reassign during InputMutation.
+        // Then we need to be able to recover from this in the importAnalysis as this is the first code that tries to use the mistyped inputs.
+        b.reassign(table, to: table)
+
+        b.buildWasmModule { m in
+            m.addWasmFunction(with: [] => []) { f, _, _ in
+                f.wasmCallIndirect(signature: [] => [], table: table, functionArgs: [], tableIndex: f.consti64(0))
+                return []
+            }
+        }
+
+        let prog = b.finalize()
+        let lifter = JavaScriptLifter(ecmaVersion: .es6, environment: JavaScriptEnvironment())
+
+        // lifting this to JavaScript should work and not fail
+        let _ = lifter.lift(prog)
+
+        // Now we build the mutated Program.
+        b.beginAdoption(from: prog)
+        for i in 0..<mutationIndex {
+            b.adopt(prog.code[i])
+        }
+        // Now, mutate at the mutationIndex and reassign f to table.
+        let oldInstr = prog.code[mutationIndex]
+        var newInouts = oldInstr.inouts
+        // This is the mutation
+        newInouts[1] = f
+        let instr = Instruction(oldInstr.op, inouts: newInouts, flags: .empty)
+        // Append the mutated instruction now.
+        b.append(instr)
+        // Adopt the rest of the Program.
+        for i in mutationIndex+1..<prog.code.count {
+            b.adopt(prog.code[i])
+        }
+
+        let mutatedProg = b.finalize()
+        // This should now fail to lift, i.e. we should see `throw "Wasmlifting failed"` in the JavaScript.
+        let js = lifter.lift(mutatedProg)
+        XCTAssertTrue(js.contains("Wasmlifting failed"))
+    }
+
+    func testBuiltinPrototypeCall() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let dateBuiltin = b.createNamedVariable(forBuiltin: "Date")
+        XCTAssert(b.type(of: dateBuiltin).Is(.object(ofGroup: "DateConstructor")))
+        let dateProto = b.getProperty("prototype", of: dateBuiltin)
+        XCTAssert(b.type(of: dateProto).Is(.object(ofGroup: "Date.prototype")))
+        let getTime = b.getProperty("getTime", of: dateProto)
+        XCTAssertEqual(b.type(of: getTime), .unboundFunction([] => .number, receiver: .jsDate))
+        let date = b.construct(dateBuiltin)
+        XCTAssertEqual(b.type(of: date), .jsDate)
+        b.callMethod("call", on: getTime, withArgs: [date])
+
+        let program = b.finalize()
+        let actual = fuzzer.lifter.lift(program)
+
+        let expected = """
+        const v2 = Date.prototype.getTime;
+        const v3 = new Date();
+        v2.call(v3);
+
+        """
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testWasmGCTypeGroupILLifter() {
+        let fuzzer = makeMockFuzzer()
+        let b = fuzzer.makeBuilder()
+
+        let typeGroupArray = b.wasmDefineTypeGroup {
+            let forwardReference = b.wasmDefineForwardOrSelfReference()
+            // Note that index types use generic .Index() descriptions without a type
+            // description (as the operation doesn't know its inputs).
+            let arrayOfArrayi32 = b.wasmDefineArrayType(
+                elementType: .wasmRef(.Index(), nullability: true),
+                mutability: false,
+                indexType: forwardReference)
+            let arrayi32 = b.wasmDefineArrayType(elementType: .wasmi32, mutability: true)
+            b.wasmResolveForwardReference(forwardReference, to: arrayi32)
+            return [arrayOfArrayi32, arrayi32]
+        }
+
+        b.wasmDefineTypeGroup {
+            let selfReference = b.wasmDefineForwardOrSelfReference()
+            return [b.wasmDefineStructType(
+                fields: [
+                    // Note that index types use generic .Index() descriptions without a type
+                    // description (as the operation doesn't know its inputs).
+                    .init(type: .wasmRef(.Index(), nullability: false), mutability: false),
+                    .init(type: .wasmi32, mutability: true),
+                    .init(type: .wasmRef(.Index(), nullability: true), mutability: true),
+                ],
+                indexTypes: [typeGroupArray[0], selfReference])]
+        }
+
+        let program = b.finalize()
+        let actual = FuzzILLifter().lift(program)
+
+        let expected = """
+        WasmBeginTypeGroup
+            v0 <- WasmDefineForwardOrSelfReference
+            v1 <- WasmDefineArrayType .wasmRef(null Index) mutability=false v0
+            v2 <- WasmDefineArrayType .wasmi32 mutability=true
+            WasmResolveForwardReference [v0 => v2]
+        v3, v4 <- WasmEndTypeGroup [v1, v2]
+        WasmBeginTypeGroup
+            v5 <- WasmDefineForwardOrSelfReference
+            v6 <- WasmDefineStructType(.wasmRef(Index) mutability=false, .wasmi32 mutability=true, .wasmRef(null Index) mutability=true) [v3, v5]
+        v7 <- WasmEndTypeGroup [v6]
 
         """
         XCTAssertEqual(actual, expected)

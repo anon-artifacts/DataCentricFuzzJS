@@ -86,9 +86,6 @@ public class Events {
 
     /// Signals that a corpus import is complete.
     public let CorpusImportComplete = Event<()>()
-
-    /// Signals the end of a mutation round
-    public let mutationComplete: Event<FuzzEngineParams> = Event<FuzzEngineParams>()
 }
 
 /// Crash behavior of a program.

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
+
 /// Builds programs.
 ///
 /// This provides methods for constructing and appending random
@@ -74,12 +76,12 @@ public class ProgramBuilder {
 
     /// Visible variables management.
     /// The `scopes` stack contains one entry per currently open scope containing all variables created in that scope.
-    private var scopes = Stack<[Variable]>([[]])
+    private(set) var scopes = Stack<[Variable]>([[]])
     /// The `variablesInScope` array simply contains all variables that are currently in scope. It is effectively the `scopes` stack flattened.
     private var variablesInScope = [Variable]()
 
     /// Keeps track of variables that have explicitly been hidden and so should not be
-    /// returned from e.g. `randomVariable()`. See `hide()` for more details.
+    /// returned from e.g. `randomJsVariable()`. See `hide()` for more details.
     private var hiddenVariables = VariableSet()
     private var numberOfHiddenVariables = 0
 
@@ -90,15 +92,26 @@ public class ProgramBuilder {
     /// This budget is used in `findOrGenerateArguments(forSignature)` and tracks the upper limit of variables that that function should emit.
     /// If that upper limit is reached the function will stop generating new variables and use existing ones instead.
     /// If this value is set to nil, there is no argument generation happening, every argument generation should enter the recursive function (findOrGenerateArgumentsInternal) through the public non-internal one.
-    private var argumentGenerationVariableBudget: Int? = nil
+    private var argumentGenerationVariableBudget: Stack<Int> = Stack()
     /// This is the top most signature that was requested when `findOrGeneratorArguments(forSignature)` was called, this is helpful for debugging.
-    private var argumentGenerationSignature: Signature? = nil
+    private var argumentGenerationSignature: Stack<Signature> = Stack()
 
     /// Stack of active object literals.
     ///
     /// This needs to be a stack as object literals can be nested, for example if an object
     /// literals is created inside a method/getter/setter of another object literals.
     private var activeObjectLiterals = Stack<ObjectLiteral>()
+
+    /// If we open a new function, we save its Variable here.
+    /// This allows CodeGenerators to refer to their Variable after they emit the
+    /// `End*Function` operation. This allows them to call the function after closing it.
+    /// Since they cannot refer to the Variable as it usually is created in the head part of the Generator.
+    private var lastFunctionVariables = Stack<Variable>()
+
+    /// Just a getter to get the top most, i.e. last function Variable.
+    public var lastFunctionVariable: Variable  {
+        return lastFunctionVariables.top
+    }
 
     /// When building object literals, the state for the current literal is exposed through this member and
     /// can be used to add fields to the literal or to determine if some field already exists.
@@ -112,6 +125,14 @@ public class ProgramBuilder {
         return activeWasmModule!
     }
 
+    public var currentWasmSignature: WasmSignature {
+        return activeWasmModule!.blockSignatures.top
+    }
+
+    public var currentWasmFunction: WasmFunction {
+        return activeWasmModule!.functions.last!
+    }
+
     /// Stack of active class definitions.
     ///
     /// Similar to object literals, class definitions can be nested so this needs to be a stack.
@@ -122,6 +143,9 @@ public class ProgramBuilder {
     public var currentClassDefinition: ClassDefinition {
         return activeClassDefinitions.top
     }
+
+    /// The remaining CodeGenerators to call as part of a building / CodeGen step, these will "clean up" the state and fix the contexts.
+    public var scheduled: Stack<GeneratorStub> = Stack()
 
     /// Stack of active switch blocks.
     private var activeSwitchBlocks = Stack<SwitchBlock>()
@@ -143,6 +167,17 @@ public class ProgramBuilder {
         return numberOfVisibleVariables > 0
     }
 
+    public var hasVisibleJsVariables: Bool {
+        let jsVarCount = variablesInScope.filter({
+            type(of: $0).Is(.jsAnything)
+        }).count
+        let hiddenJsVarCount = hiddenVariables.filter({
+            type(of: $0).Is(.jsAnything)
+        }).count
+
+        return jsVarCount > hiddenJsVarCount
+    }
+
     /// All currently visible variables.
     public var visibleVariables: [Variable] {
         if numberOfHiddenVariables == 0 {
@@ -158,6 +193,10 @@ public class ProgramBuilder {
         self.fuzzer = fuzzer
         self.jsTyper = JSTyper(for: fuzzer.environment)
         self.parent = parent
+
+        if fuzzer.config.logLevel.isAtLeast(.verbose)  {
+            self.buildLog = BuildLog()
+        }
     }
 
     /// Resets this builder.
@@ -174,10 +213,12 @@ public class ProgramBuilder {
         jsTyper.reset()
         activeObjectLiterals.removeAll()
         activeClassDefinitions.removeAll()
+        buildLog?.reset()
     }
 
     /// Finalizes and returns the constructed program, then resets this builder so it can be reused for building another program.
     public func finalize() -> Program {
+        assert(scheduled.isEmpty)
         let program = Program(code: code, parent: parent, comments: comments, contributors: contributors)
         reset()
         return program
@@ -186,6 +227,16 @@ public class ProgramBuilder {
     /// Prints the current program as FuzzIL code to stdout. Useful for debugging.
     public func dumpCurrentProgram() {
         print(FuzzILLifter().lift(code))
+    }
+
+    // This can be used to crash the fuzzer if we see an unexpected condition.
+    // Since some edge cases are hard to trigger, this can be used to surface these conditions
+    // during "real" fuzzing runs, i.e. in release builds.
+    public func reportErrorIf(_ condition: Bool, _ message: String) {
+        if condition {
+            let prog = FuzzILLifter().lift(code)
+            fatalError("\(message)\nProgram:\n\(prog)")
+        }
     }
 
     /// Returns the current number of instructions of the program we're building.
@@ -243,8 +294,10 @@ public class ProgramBuilder {
     /// Returns a random integer value suitable as size of for example an array.
     /// The returned value is guaranteed to be positive.
     public func randomSize(upTo maximum: Int64 = 0x100000000) -> Int64 {
-        assert(maximum >= 0x1000)
-        if probability(0.5) {
+        assert(maximum >= 0)
+        if maximum < 0x1000 {
+            return Int64.random(in: 0...maximum)
+        } else if probability(0.5) {
             return chooseUniform(from: fuzzer.environment.interestingIntegers.filter({ $0 >= 0 && $0 <= maximum }))
         } else {
             return withEqualProbability({
@@ -262,7 +315,7 @@ public class ProgramBuilder {
     /// Returns a random non-negative integer value suitable as index.
     public func randomNonNegativeIndex(upTo max: Int64 = 0x100000000) -> Int64 {
         // Prefer small indices.
-        if probability(0.33) {
+        if max > 10 && probability(0.33) {
             return Int64.random(in: 0...10)
         } else {
             return randomSize(upTo: max)
@@ -317,6 +370,15 @@ public class ProgramBuilder {
         }, {
             String.random(ofLength: Int.random(in: 1...5))
         })
+    }
+
+    public func randomBytes() -> [UInt8] {
+        let size = withProbability(0.9) {
+            Int.random(in: 0...127)
+        } else: {
+            Int.random(in:128...1024)
+        }
+        return (0..<size).map {_ in UInt8.random(in: UInt8.min ... UInt8.max)}
     }
 
     func randomRegExpPattern(compatibleWithFlags flags: RegExpFlags) -> String {
@@ -421,6 +483,36 @@ public class ProgramBuilder {
         return probability(0.5) ? randomBuiltinMethodName() : randomCustomMethodName()
     }
 
+    private static func generateConstrained<T: Equatable>(
+            _ generator: () -> T,
+            notIn: any Collection<T>,
+            fallback: () -> T) -> T {
+        var result: T
+        var attempts = 0
+        repeat {
+            if attempts >= 10 {
+                return fallback()
+            }
+            result = generator()
+            attempts += 1
+        } while notIn.contains(result)
+        return result
+    }
+
+    // Generate a string not already contained in `notIn` using the provided `generator`. If it fails
+    // repeatedly, return a random string instead.
+    public func generateString(_ generator: () -> String, notIn: any Collection<String>) -> String {
+        Self.generateConstrained(generator, notIn: notIn,
+            fallback: {String.random(ofLength: Int.random(in: 1...5))})
+    }
+
+    // Find a random variable to use as a string that isn't contained in `notIn`. If it fails
+    // repeatedly, create a random string literal instead.
+    public func findOrGenerateStringLikeVariable(notIn: any Collection<Variable>) -> Variable {
+        return Self.generateConstrained(randomJsVariable, notIn: notIn,
+            fallback: {loadString(String.random(ofLength: Int.random(in: 1...5)))})
+    }
+
     // Settings and constants controlling the behavior of randomParameters() below.
     // This determines how many variables of a given type need to be visible before
     // that type is considered a candidate for a parameter type. For example, if this
@@ -428,7 +520,7 @@ public class ProgramBuilder {
     // parameters of type .integer.
     private let thresholdForUseAsParameter = 3
 
-    // The probability of using .anything as parameter type even though we have more specific alternatives.
+    // The probability of using .jsAnything as parameter type even though we have more specific alternatives.
     // Doing this sometimes is probably beneficial so that completely random values are passed to the function.
     // Future mutations, such as the ExplorationMutator can then figure out what to do with the parameters.
     // Writable so it can be changed for tests.
@@ -462,7 +554,7 @@ public class ProgramBuilder {
         // Find all types of which we currently have at least a few visible variables that we could later use as arguments.
         // TODO: improve this code by using some kind of cache? That could then also be used for randomVariable(ofType:) etc.
         var availableVariablesByType = [ILType: Int]()
-        for v in visibleVariables {
+        for v in visibleVariables where type(of: v).Is(.jsAnything) {
             let t = type(of: v)
             // TODO: should we also add this values to the buckets for supertypes (without this becoming O(n^2))?
             // TODO: alternatively just check for some common union types, e.g. .number, .primitive, as long as these can be used meaningfully?
@@ -471,13 +563,13 @@ public class ProgramBuilder {
 
         var candidates = Array(availableVariablesByType.filter({ k, v in v >= thresholdForUseAsParameter }).keys)
         if candidates.isEmpty {
-            candidates.append(.anything)
+            candidates.append(.jsAnything)
         }
 
         var params = ParameterList()
         for _ in 0..<n {
             if probability(probabilityOfUsingAnythingAsParameterTypeIfAvoidable) {
-                params.append(.anything)
+                params.append(.jsAnything)
             } else {
                 params.append(.plain(chooseUniform(from: candidates)))
             }
@@ -491,13 +583,12 @@ public class ProgramBuilder {
     public func findOrGenerateArguments(forSignature signature: Signature, maxNumberOfVariablesToGenerate: Int = 100) -> [Variable] {
         assert(context.contains(.javascript))
 
-        assert(argumentGenerationVariableBudget == nil)
-        argumentGenerationVariableBudget = numVariables + maxNumberOfVariablesToGenerate
-        argumentGenerationSignature = signature
+        argumentGenerationVariableBudget.push(numVariables + maxNumberOfVariablesToGenerate)
+        argumentGenerationSignature.push(signature)
 
         defer {
-            argumentGenerationVariableBudget = nil
-            argumentGenerationSignature = nil
+            argumentGenerationVariableBudget.pop()
+            argumentGenerationSignature.pop()
         }
 
         return findOrGenerateArgumentsInternal(forSignature: signature)
@@ -533,14 +624,14 @@ public class ProgramBuilder {
 
         // Before we do any generation below, let's take into account that we already create a variable with this invocation, i.e. the createObject at the end.
         // Therefore we need to decrease the budget here temporarily.
-        self.argumentGenerationVariableBudget! -= 1
+        self.argumentGenerationVariableBudget.top -= 1
         // We defer the increase again, because at that point the variable is actually visible, i.e. `numVariables` was increased through the `createObject` call.
-        defer { self.argumentGenerationVariableBudget! += 1 }
+        defer { self.argumentGenerationVariableBudget.top += 1 }
 
         var properties: [String: Variable] = [:]
 
         for propertyName in type.properties {
-            // If we have an object that has a group, we should get a type here, otherwise if we don't have a group, we will get .anything.
+            // If we have an object that has a group, we should get a type here, otherwise if we don't have a group, we will get .jsAnything.
             let propType = fuzzer.environment.type(ofProperty: propertyName, on: type)
             properties[propertyName] = generateTypeInternal(propType)
         }
@@ -550,15 +641,31 @@ public class ProgramBuilder {
 
     public func findOrGenerateType(_ type: ILType, maxNumberOfVariablesToGenerate: Int = 100) -> Variable {
         assert(context.contains(.javascript))
-        assert(argumentGenerationVariableBudget == nil)
 
-        argumentGenerationVariableBudget = numVariables + maxNumberOfVariablesToGenerate
+        argumentGenerationVariableBudget.push(numVariables + maxNumberOfVariablesToGenerate)
 
         defer {
-            argumentGenerationVariableBudget = nil
+            argumentGenerationVariableBudget.pop()
         }
 
         return generateTypeInternal(type)
+    }
+
+    // If the type is a builtin constructor like Promise or Temporal.Instant, generate
+    // a path to it from field accesses.
+    private func maybeGenerateConstructorAsPath(_ type: ILType) -> Variable? {
+        guard let group = type.group else {
+            return nil
+        }
+        guard let path = self.fuzzer.environment.getPathIfConstructor(ofGroup: group) else {
+            return nil
+        }
+        var current = createNamedVariable(forBuiltin: path[0])
+        for element in path.dropFirst() {
+            current = getProperty(element, of: current)
+        }
+        assert(self.type(of: current).Is(type), "Registered constructorPath produces incorrect type for ObjectGroup \(group)")
+        return current
     }
 
     private func generateTypeInternal(_ type: ILType) -> Variable {
@@ -568,9 +675,14 @@ public class ProgramBuilder {
             }
         }
 
-        if numVariables >= argumentGenerationVariableBudget! {
-            if argumentGenerationSignature != nil {
-              logger.warning("Reached variable generation limit in generateType for Signature: \(argumentGenerationSignature!), returning a random variable for use as type \(type).")
+        // For builtin constructors from the JavaScriptEnvironment, just generate them.
+        if let ret = self.maybeGenerateConstructorAsPath(type) {
+            return ret
+        }
+
+        if numVariables >= argumentGenerationVariableBudget.top {
+            if !argumentGenerationSignature.isEmpty {
+                logger.warning("Reached variable generation limit in generateType for Signature: \(argumentGenerationSignature.top), returning a random variable for use as type \(type).")
             } else {
               logger.warning("Reached variable generation limit in generateType, returning a random variable for use as type \(type).")
             }
@@ -583,7 +695,11 @@ public class ProgramBuilder {
             (.integer, { return self.loadInt(self.randomInt()) }),
             (.string, {
                 if type.isEnumeration {
-                    return self.loadString(type.enumValues.randomElement()!)
+                    return self.loadEnum(type)
+                }
+                if let typeName = type.group,
+                   let customStringGen = self.fuzzer.environment.getNamedStringGenerator(ofName: typeName) {
+                    return self.loadString(customStringGen(), customName: typeName)
                 }
                 return self.loadString(self.randomString()) }),
             (.boolean, { return self.loadBool(probability(0.5)) }),
@@ -593,17 +709,37 @@ public class ProgramBuilder {
                     let (pattern, flags) = self.randomRegExpPatternAndFlags()
                     return self.loadRegExp(pattern, flags)
                 }),
-            (.iterable, { return self.createArray(with: self.randomVariables(upTo: 5)) }),
             (.function(), {
                     // TODO: We could technically generate a full function here but then we would enter the full code generation logic which could do anything.
                     // Because we want to avoid this, we will just pick anything that can be a function.
+                    //
+                    // Note that builtin constructors are handled above in the maybeGenerateConstructorAsPath call.
                     return self.randomVariable(forUseAs: .function())
                 }),
+            (.unboundFunction(), {
+                // TODO: We have the same issue as above for functions.
+                // First try to find an existing unbound function. if not present, try to find any
+                // function. Using any function as an unbound function is fine, it just misses the
+                // information about the receiver type (which for many functions doesn't matter).
+                return self.randomVariable(ofType: .unboundFunction()) ?? self.randomVariable(forUseAs: .function())
+            }),
             (.undefined, { return self.loadUndefined() }),
             (.constructor(), {
                     // TODO: We have the same issue as above for functions.
+                    //
+                    // Note that builtin constructors are handled above in the maybeGenerateConstructorAsPath call.
                     return self.randomVariable(forUseAs: .constructor())
                 }),
+            (.wasmTypeDef(), {
+                // Call into the WasmTypeGroup generator (or other that provide a .wasmTypeDef)
+                let generators = self.fuzzer.codeGenerators.filter { gen in
+                    gen.produces.contains { type in
+                        type.Is(.wasmTypeDef())
+                    }
+                }
+                let _ = self.complete(generator: generators.randomElement(), withBudget: 5)
+                return self.randomVariable(ofType: .wasmTypeDef())!
+            }),
             (.object(), {
                 func useMethodToProduce(_ method: (group: String, method: String)) -> Variable {
                     let group = self.fuzzer.environment.type(ofGroup: method.group)
@@ -613,7 +749,6 @@ public class ProgramBuilder {
                         .signatures(ofMethod: method.method, on: group).filter({
                         self.fuzzer.environment.isSubtype($0.outputType, of: type)
                         }))
-
 
                     let args = self.findOrGenerateArgumentsInternal(forSignature: sig)
                     return self.callMethod(method.method, on: obj, withArgs: args)
@@ -630,7 +765,7 @@ public class ProgramBuilder {
                             // This is a constructor, we have to call it.
                             let sig = builtinType.signature
                             if sig == nil {
-                                let result = self.randomVariable()
+                                let result = self.randomJsVariable()
                                 return result
                             }
                             let args = self.findOrGenerateArgumentsInternal(forSignature: sig!)
@@ -646,42 +781,69 @@ public class ProgramBuilder {
                         // This is a constructor, we have to call it.
                         let sig = self.type(of: prop).signature
                         if sig == nil {
-                            let result = self.randomVariable()
+                            let result = self.randomJsVariable()
                             return result
                         }
                         let args = self.findOrGenerateArgumentsInternal(forSignature: sig!)
                         return self.construct(prop, withArgs: args)
                     }
                 }
-                    let producingMethods = self.fuzzer.environment.getProducingMethods(ofType: type)
-                    let producingProperties = self.fuzzer.environment.getProducingProperties(ofType: type)
-                    let globalProperties = producingProperties.filter() {(group: String, property: String) in
-                        // Global properties are those that don't belong to a group, i.e. where the group is empty.
-                        return group == ""
+
+                // If we have a producing generator, we aren't going to get this type from elsewhere
+                // so try and generate it using the generator in most cases
+                let producingGenerator = self.fuzzer.environment.getProducingGenerator(ofType: type);
+                if let producingGenerator {
+                    if probability(producingGenerator.probability) {
+                        return producingGenerator.generator(self)
                     }
-                    // If there is a global property or builtin for this type, use it with high probability.
-                    if !globalProperties.isEmpty && probability(0.9) {
-                        return usePropertyToProduce(globalProperties.randomElement()!)
-                    }
-                    let maybeMethod = producingMethods.randomElement()
-                    let maybeProperty = producingProperties.randomElement()
-                    if let method = maybeMethod ,let property = maybeProperty {
-                        if probability(Double(producingMethods.count) / Double(producingMethods.count + producingProperties.count)) {
-                            return useMethodToProduce(method)
-                        } else {
-                            return usePropertyToProduce(property)
-                        }
-                    } else if let method = maybeMethod {
+                }
+
+                let producingMethods = self.fuzzer.environment.getProducingMethods(ofType: type)
+                let producingProperties = self.fuzzer.environment.getProducingProperties(ofType: type)
+                let globalProperties = producingProperties.filter() {(group: String, property: String) in
+                    // Global properties are those that don't belong to a group, i.e. where the group is empty.
+                    return group == ""
+                }
+                // If there is a global property or builtin for this type, use it with high probability.
+                if !globalProperties.isEmpty && probability(0.9) {
+                    return usePropertyToProduce(globalProperties.randomElement()!)
+                }
+                let maybeMethod = producingMethods.randomElement()
+                let maybeProperty = producingProperties.randomElement()
+                if let method = maybeMethod ,let property = maybeProperty {
+                    if probability(Double(producingMethods.count) / Double(producingMethods.count + producingProperties.count)) {
                         return useMethodToProduce(method)
-                    } else if let property = maybeProperty {
+                    } else {
                         return usePropertyToProduce(property)
                     }
-                    // Otherwise this is one of the following:
-                    // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
-                    // 2. an object without a group, but it has some required fields.
-                    // In either case, we try to construct such an object.
-                    return self.createObjectWithProperties(type)
+                } else if let method = maybeMethod {
+                    return useMethodToProduce(method)
+                } else if let property = maybeProperty {
+                    return usePropertyToProduce(property)
+                }
+                let generators = self.fuzzer.codeGenerators.filter({
+                    // Right now only use generators that require a single context.
+                    $0.parts.last!.requiredContext.isSingle &&
+                    $0.parts.last!.requiredContext.satisfied(by: self.context) &&
+                    $0.parts.last!.produces.contains(where: { producedType in
+                        producedType.Is(type)
+                    })
                 })
+                if generators.count > 0 {
+                    let generator = generators.randomElement()
+                    let _ = self.complete(generator: generator, withBudget: 10)
+                    // The generator we ran above is supposed to generate the
+                    // requested type. If no variable of that type exists
+                    // now, then either the generator or its annotation is
+                    // wrong.
+                    return self.randomVariable(ofTypeOrSubtype: type)!
+                }
+                // Otherwise this is one of the following:
+                // 1. an object with more type information, i.e. it has a group, but no associated builtin, e.g. we cannot construct it with new.
+                // 2. an object without a group, but it has some required fields.
+                // In either case, we try to construct such an object.
+                return self.createObjectWithProperties(type)
+            })
         ]
 
         // Make sure that we walk over these tests and their generators randomly.
@@ -703,20 +865,20 @@ public class ProgramBuilder {
     /// Access to variables.
     ///
 
-    /// Returns a random variable.
-    public func randomVariable() -> Variable {
+    /// Returns a random JavaScript variable.
+    public func randomJsVariable() -> Variable {
         assert(hasVisibleVariables)
-        return findVariable()!
+        return randomVariable(ofType: .jsAnything)!
     }
 
-    /// Returns up to N (different) random variables.
+    /// Returns up to N (different) random JavaScript variables.
     /// This method will only return fewer than N variables if the number of currently visible variables is less than N.
-    public func randomVariables(upTo n: Int) -> [Variable] {
+    public func randomJsVariables(upTo n: Int) -> [Variable] {
         guard hasVisibleVariables else { return [] }
 
         var variables = [Variable]()
         while variables.count < n {
-            guard let newVar = findVariable(satisfying: { !variables.contains($0) }) else {
+            guard let newVar = findVariable(satisfying: { !variables.contains($0) && type(of: $0).Is(.jsAnything) }) else {
                 break
             }
             variables.append(newVar)
@@ -724,10 +886,10 @@ public class ProgramBuilder {
         return variables
     }
 
-    /// Returns up to N potentially duplicate random variables.
-    public func randomVariables(n: Int) -> [Variable] {
+    /// Returns up to N potentially duplicate random JavaScript variables.
+    public func randomJsVariables(n: Int) -> [Variable] {
         assert(hasVisibleVariables)
-        return (0..<n).map { _ in randomVariable() }
+        return (0..<n).map { _ in randomJsVariable() }
     }
 
     /// This probability affects the behavior of `randomVariable(forUseAs:)`. In particular, it determines how much variables with
@@ -737,46 +899,53 @@ public class ProgramBuilder {
     /// This is writable for use in tests, but it could also be used to change how "conservative" variable selection is.
     var probabilityOfVariableSelectionTryingToFindAnExactMatch = 0.5
 
-    /// This threshold  affects the behavior of `randomVariable(forUseAs:)`. It determines how many existing variables of the
-    /// requested type we want to have before we try to find an exact match. If there are fewer variables of the requested type, we'll
-    /// always do a more general search which may also return variables of unknown (i.e. `.anything`) type.
-    /// This ensures that consecutive queries for the same type can return different variables.
-    let minVisibleVariablesOfRequestedTypeForVariableSelection = 3
-
     /// Returns a random variable to be used as the given type.
     ///
     /// This function may return variables of a different type, or variables that may have the requested type, but could also have a different type.
-    /// For example, when requesting a .integer, this function may also return a variable of type .number, .primitive, or even .anything as all of these
+    /// For example, when requesting a .integer, this function may also return a variable of type .number, .primitive, or even .jsAnything as all of these
     /// types may be an integer (but aren't guaranteed to be). In this way, this function ensures that variables for which no exact type could be statically
     /// determined will also be used as inputs for following code.
     ///
     /// It's the caller's responsibility to check the type of the returned variable to avoid runtime exceptions if necessary. For example, if performing a
     /// property access, the returned variable should be checked if it `MayBe(.nullish)` in which case a property access would result in a
     /// runtime exception and so should be appropriately guarded against that.
+    /// This function also returns a boolean, `matches`. If matches is not true, it means that value being returned either `MayBe` the type requested, or
+    /// is a random JsVariable.
     ///
     /// If the variable must be of the specified type, use `randomVariable(ofType:)` instead.
-    public func randomVariable(forUseAs type: ILType) -> Variable {
+    public func randomVariable(forUseAsGuarded type: ILType) -> (variable: Variable, matches: Bool) {
         assert(type != .nothing)
 
         var result: Variable? = nil
+        var matches = true
 
         // Prefer variables that are known to have the requested type if there's a sufficient number of them.
-        if probability(probabilityOfVariableSelectionTryingToFindAnExactMatch) &&
-            haveAtLeastNVisibleVariables(ofType: type, n: minVisibleVariablesOfRequestedTypeForVariableSelection) {
+        if probability(probabilityOfVariableSelectionTryingToFindAnExactMatch) {
             result = findVariable(satisfying: { self.type(of: $0).Is(type) })
         }
 
         // Otherwise, select variables that may have the desired type, but could also be something else.
         // In particular, this query will include all variable for which we don't know the type as they'll
-        // be typed as .anything. We usually expect to have a lot of candidates available for this query,
+        // be typed as .jsAnything. We usually expect to have a lot of candidates available for this query,
         // so we don't check the number of them upfront as we do for the above query.
+        // If findVariable(satisfying: { self.type(of: $0).Is(type) }) returned nil, we cannot be sure that
+        // the result matches the requested type, so we set matches to be false.
         if result == nil {
+            matches = false
             result = findVariable(satisfying: { self.type(of: $0).MayBe(type) })
         }
 
         // Worst case fall back to completely random variables. This should happen rarely, as we'll usually have
-        // at least some variables of type .anything.
-        return result ?? randomVariable()
+        // at least some variables of type .jsAnything.
+        return (result ?? randomJsVariable(), matches)
+    }
+
+    /// This function is a wrapper around `randomVariable(forUseAsGuarded type:)' which ignores the `matches`
+    /// value that it returns.
+    /// See the comment above the other function for details.
+    public func randomVariable(forUseAs type: ILType) -> Variable {
+        assert(type != .nothing)
+        return randomVariable(forUseAsGuarded: type).variable
     }
 
     /// Returns a random variable that is known to have the given type.
@@ -806,7 +975,7 @@ public class ProgramBuilder {
     }
 
     /// Returns a random variable satisfying the given constraints or nil if none is found.
-    func findVariable(satisfying filter: ((Variable) -> Bool) = { _ in true }) -> Variable? {
+    public func findVariable(satisfying filter: ((Variable) -> Bool) = { _ in true }) -> Variable? {
         assert(hasVisibleVariables)
 
         // TODO: we should implement some kind of fast lookup data structure to speed up the lookup of variables by type.
@@ -843,19 +1012,6 @@ public class ProgramBuilder {
         }
 
         return chooseUniform(from: candidates)
-    }
-
-    /// Helper function to determine if we have a sufficient number of variables of a given type to ensure that
-    /// consecutive queries for a variable of a given type will not always return the same variables.
-    private func haveAtLeastNVisibleVariables(ofType t: ILType, n: Int) -> Bool {
-        var count = 0
-        for v in variablesInScope where !hiddenVariables.contains(v) && type(of: v).Is(t) {
-            count += 1
-            if count >= n {
-                return true
-            }
-        }
-        return false
     }
 
     /// Find random variables to use as arguments for calling the specified function.
@@ -904,6 +1060,29 @@ public class ProgramBuilder {
         return parameterTypes.map({ randomVariable(forUseAs: $0) })
     }
 
+    /// Find random variables to use as arguments for calling a function with the given parameters.
+    ///
+    /// If any of the arguments returned does not match the type of its corresponding parameter,
+    /// the boolean this function returns will be true. If everything matches, it will be false.
+    public func randomArguments(forCallingGuardableFunction function: Variable) -> (arguments: [Variable], allArgsMatch: Bool) {
+        let signature = type(of: function).signature ?? Signature.forUnknownFunction
+        let params = signature.parameters
+        assert(params.count == 0 || hasVisibleVariables)
+
+        let parameterTypes = ProgramBuilder.prepareArgumentTypes(forParameters: params)
+
+        var variables: [Variable] = []
+        var allArgsMatch = true
+        for type in parameterTypes {
+            let (variable, matches) = randomVariable(forUseAsGuarded: type)
+            variables.append(variable)
+            allArgsMatch = allArgsMatch && matches
+        }
+
+        return (variables, allArgsMatch)
+    }
+
+
     /// Converts the JS world signature into a Wasm world signature.
     /// In practice this means that we will try to map JS types to corresponding Wasm types.
     /// E.g. .number becomes .wasmf32, .bigint will become .wasmi64, etc.
@@ -911,7 +1090,7 @@ public class ProgramBuilder {
     /// I.e. .object might be converted to .wasmf32 or .wasmExternRef.
     /// Use this function to generate arguments for a WasmJsCall operation and attach the converted signature to
     /// the WasmJsCall instruction.
-    public func randomWasmArguments(forCallingJsFunction function: Variable) -> (Signature, [Variable])? {
+    public func randomWasmArguments(forCallingJsFunction function: Variable) -> (WasmSignature, [Variable])? {
         let signature = type(of: function).signature ?? Signature.forUnknownFunction
 
         var visibleTypes = [ILType: Int]()
@@ -921,7 +1100,8 @@ public class ProgramBuilder {
         for v in visibleVariables {
             // Filter for primitive wasm types here.
             let t = type(of: v)
-            if t.Is(.wasmPrimitive) {
+            // TODO(mliedtke): Support wasm-gc types in wasm-js calls.
+            if t.Is(.wasmPrimitive) && !t.Is(.wasmGenericRef) {
                 visibleTypes[t] = (visibleTypes[t] ?? 0) + 1
             }
         }
@@ -945,12 +1125,9 @@ public class ProgramBuilder {
         return (newSignature, variables)
     }
 
-    public func randomWasmArguments(forWasmSignature signature: Signature) -> [Variable]? {
-        // This is a bit useless, as all types here are already .plain types, we basically only want to unwrap the plains here.
-        let parameterTypes = ProgramBuilder.prepareArgumentTypes(forParameters: signature.parameters)
-
+    public func randomWasmArguments(forWasmSignature signature: WasmSignature) -> [Variable]? {
         var variables = [Variable]()
-        for parameterType in parameterTypes {
+        for parameterType in signature.parameterTypes {
             if let v = randomVariable(ofType: parameterType) {
                 variables.append(v)
             } else {
@@ -963,16 +1140,25 @@ public class ProgramBuilder {
 
     // We simplify the signature by first converting it into types, approximating this signature by getting the corresponding Wasm world types.
     // Then we convert that back into a signature with only .plain types and attach that to the WasmJsCall instruction.
-    public static func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> Signature {
+    public static func convertJsSignatureToWasmSignature(_ signature: Signature, availableTypes types: WeightedList<ILType>) -> WasmSignature {
         let parameterTypes = prepareArgumentTypes(forParameters: signature.parameters).map { approximateWasmTypeFromJsType($0, availableTypes: types) }
         let outputType = mapJsToWasmType(signature.outputType)
-        return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
+        return WasmSignature(expects: parameterTypes, returns: [outputType])
     }
 
-    public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> Signature {
+    public static func convertWasmSignatureToJsSignature(_ signature: WasmSignature) -> Signature {
+        let parameterTypes = signature.parameterTypes.map(mapWasmToJsType)
+        // If we return multiple values it will just be an Array in JavaScript.
+        let returnType = signature.outputTypes.count == 0 ? ILType.undefined
+        : signature.outputTypes.count == 1 ? mapWasmToJsType(signature.outputTypes[0])
+        : .jsArray
+        return Signature(expects: parameterTypes.map(Parameter.plain), returns: returnType)
+    }
+
+    public static func convertJsSignatureToWasmSignatureDeterministic(_ signature: Signature) -> WasmSignature {
         let parameterTypes = prepareArgumentTypesDeterministic(forParameters: signature.parameters).map { mapJsToWasmType($0) }
         let outputType = mapJsToWasmType(signature.outputType)
-        return Signature(expects: parameterTypes.map { .plain($0) }, returns: outputType)
+        return WasmSignature(expects: parameterTypes, returns: [outputType])
     }
 
     /// Find random arguments for a function call and spread some of them.
@@ -980,7 +1166,7 @@ public class ProgramBuilder {
         var arguments: [Variable] = []
         var spreads: [Bool] = []
         for _ in 0...n {
-            let val = randomVariable()
+            let val = randomJsVariable()
             arguments.append(val)
             // Prefer to spread values that we know are iterable, as non-iterable values will lead to exceptions ("TypeError: Found non-callable @@iterator")
             if type(of: val).Is(.iterable) {
@@ -995,7 +1181,7 @@ public class ProgramBuilder {
 
     /// Hide the specified variable, preventing it from being used as input by subsequent code.
     ///
-    /// Hiding a variable prevents it from being returned from `randomVariable()` and related functions, which
+    /// Hiding a variable prevents it from being returned from `randomJsVariable()` and related functions, which
     /// in turn prevents it from being used as input for later instructions, unless the hidden variable is explicitly specified
     /// as input, which is still allowed.
     ///
@@ -1026,7 +1212,7 @@ public class ProgramBuilder {
         if jsType.Is(.integer) {
             return [.wasmi32, .wasmf64, .wasmf32]
         } else if jsType.Is(.number) {
-            return [.wasmf32, .wasmf64, .wasmi32]
+            return [.wasmf32, .wasmf64, .wasmi32, .wasmRefI31, .wasmI31Ref]
         } else if jsType.Is(.bigint) {
             return [.wasmi64]
         } else if jsType.Is(.function()) {
@@ -1038,9 +1224,42 @@ public class ProgramBuilder {
         }
     }
 
-    // Helper that converts JS Types to a deterministic known Wasm counterparts.
+    // Helper that converts a JS type to its deterministic known Wasm counterpart.
     private static func mapJsToWasmType(_ type: ILType) -> ILType {
         return matchingWasmTypes(jsType: type)[0]
+    }
+
+    // Helper that converts a Wasm type to its deterministic known JS counterparts.
+    private static func mapWasmToJsType(_ type: ILType) -> ILType {
+        if type.Is(.wasmi32) {
+            return .integer
+        } else if type.Is(.wasmf32) {
+            return .float
+        } else if type.Is(.wasmf64) {
+            return .float
+        } else if type.Is(.wasmi64) {
+            return .bigint
+        } else if type.Is(.wasmSimd128) {
+            // We should not see these in JS per spec but we might export them, as such type them as .jsAnything for now.
+            // Consider passing the .wasmSimd128 through somehow, such that it's unlikely that it gets called?
+            // https://github.com/WebAssembly/simd/blob/main/proposals/simd/SIMD.md#javascript-api-and-simd-values
+            return .jsAnything
+        } else if type.Is(.nothing) {
+            return .undefined
+        } else if type.Is(.wasmFuncRef) {
+            // TODO(cffsmith): refine this type with the signature if we can.
+            return .function()
+        } else if type.Is(.wasmI31Ref) {
+            return .integer
+        } else if type.Is(.wasmNullRef) || type.Is(.wasmNullExternRef) || type.Is(.wasmNullFuncRef) {
+            // This is slightly imprecise: The null types only accept null, not undefined but
+            // Fuzzilli doesn't differentiate between null and undefined in its type system.
+            return .nullish
+        } else if type.Is(.wasmGenericRef) {
+            return .jsAnything
+        } else {
+            fatalError("Unexpected type encountered: \(type).")
+        }
     }
 
     // Helper function to convert JS Types to an arbitrary matching Wasm type or picks from the other available types-
@@ -1067,11 +1286,6 @@ public class ProgramBuilder {
 
     public func type(ofProperty property: String, on v: Variable) -> ILType {
         return jsTyper.inferPropertyType(of: property, on: v)
-    }
-
-    public func wasmSignature(ofFunction function: Variable) -> Signature? {
-        assert(context.inWasm)
-        return jsTyper.wasmSignature(ofFunction: function)
     }
 
     public func methodSignatures(of methodName: String, on object: Variable) -> [Signature] {
@@ -1339,10 +1553,10 @@ public class ProgramBuilder {
             for v in variables {
                 let type = typer.type(of: v)
                 // For subroutines, the return type is only available once the subroutine has been fully processed.
-                // Prior to that, it is assumed to be .anything. This may lead to incompatible functions being selected
+                // Prior to that, it is assumed to be .jsAnything. This may lead to incompatible functions being selected
                 // as replacements (e.g. if the following code assumes that the return value must be of type X), but
                 // is probably fine in practice.
-                assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .anything) == .anything)
+                assert(!instr.hasOneOutput || v != instr.output || !(instr.op is BeginAnySubroutine) || (type.signature?.outputType ?? .jsAnything) == .jsAnything)
                 // Try to find a compatible variable in the host program.
                 let replacement: Variable
                 if let match = randomVariable(ofType: type) {
@@ -1399,7 +1613,13 @@ public class ProgramBuilder {
         // Simple optimization: avoid splicing data-flow "roots", i.e. simple instructions that don't have any inputs, as this will
         // most of the time result in fairly uninteresting splices that for example just copy a literal from another program.
         // The exception to this are special instructions that exist outside of JavaScript context, for example instructions that add fields to classes.
-        let rootCandidates = candidates.filter({ !program.code[$0].isSimple || program.code[$0].numInputs > 0 || !program.code[$0].op.requiredContext.contains(.javascript) })
+        // Also skip the WasmReturn operation as its inputs depend on the result types of the function. Splicing will alomst certainly result in wrongly typed inputs.
+        let rootCandidates = candidates.filter {
+            (!program.code[$0].isSimple
+                || program.code[$0].numInputs > 0
+                || !program.code[$0].op.requiredContext.contains(.javascript)
+            ) && !(program.code[$0].op is WasmReturn)
+        }
         guard !rootCandidates.isEmpty else { return false }
         let rootIndex = specifiedIndex ?? chooseUniform(from: rootCandidates)
         guard rootCandidates.contains(rootIndex) else { return false }
@@ -1503,12 +1723,6 @@ public class ProgramBuilder {
     // parent budget and the (absolute) threshold for recursive code generation.
     //
 
-    /// The first "knob": this mainly determines the shape of generated code as it determines how large block bodies are relative to their surrounding code.
-    /// This also influences the nesting depth of the generated code, as recursive code generators are only invoked if enough "budget" is still available.
-    /// These are writable so they can be reconfigured in tests.
-    var minRecursiveBudgetRelativeToParentBudget = 0.05
-    var maxRecursiveBudgetRelativeToParentBudget = 0.50
-
     /// The second "knob": the minimum budget required to be able to invoke recursive code generators.
     public static let minBudgetForRecursiveCodeGeneration = 5
 
@@ -1522,24 +1736,102 @@ public class ProgramBuilder {
         case generatingAndSplicing
     }
 
-    // Keeps track of the state of one buildInternal() invocation. These are tracked in a stack, one entry for each recursive call.
-    // This is a class so that updating the currently active state is possible without push/pop.
-    private class BuildingState {
-        let initialBudget: Int
-        let mode: BuildingMode
-        var recursiveBuildingAllowed = true
-        var nextRecursiveBlockOfCurrentGenerator = 1
-        var totalRecursiveBlocksOfCurrentGenerator: Int? = nil
-        // An optional budget for recursive building.
-        var recursiveBudget: Int? = nil
+    struct BuildLog {
+        enum ActionOutcome: CustomStringConvertible {
+            case success
+            case failed(String?)
+            case started
 
-        init(initialBudget: Int, mode: BuildingMode) {
-            assert(initialBudget > 0)
-            self.initialBudget = initialBudget
-            self.mode = mode
+            var description: String {
+                switch self {
+                    case .success:
+                        return "✅"
+                    case .failed(let reason):
+                        if let reason {
+                            return "❌: \(reason)"
+                        } else {
+                            return "❌"
+                        }
+                    case .started:
+                        return "started"
+                }
+            }
+        }
+
+        struct BuildAction {
+            var name: String
+            var outcome = ActionOutcome.started
+            var produces: [ILType]
+        }
+
+        var pendingActions: Stack<BuildAction> = Stack()
+        var actions = [(BuildAction, Int)]()
+        var indent = 0
+
+        mutating func startAction(_ actionName: String, produces: [ILType]) {
+            let action = BuildAction(name: actionName, produces: produces)
+            // Mark this action as `.started`.
+            actions.append((action, indent))
+            // Push the action onto the pending stack, we will need to complete or fail it later.
+            pendingActions.push(action)
+            indent += 1
+        }
+
+        mutating func succeedAction(_ newlyCreatedVariableTypes: [ILType]) {
+            indent -= 1
+            var finishedAction = pendingActions.pop()
+            finishedAction.outcome = .success
+            actions.append((finishedAction, indent))
+            #if DEBUG
+            // Now Check that we've seen these new types.
+            for t in finishedAction.produces {
+                if !newlyCreatedVariableTypes.contains(where: {
+                    $0.Is(t)
+                }) {
+                    var fatalErrorString = ""
+                    fatalErrorString += "Action: \(finishedAction.name)\n"
+                    fatalErrorString += "Action guaranteed it would produce: \(finishedAction.produces)\n"
+                    fatalErrorString += "\(getLogString())\n"
+                    fatalErrorString += "newlyCreatedVariableTypes: \(newlyCreatedVariableTypes) does not contain expected type \(t)"
+                    fatalError(fatalErrorString)
+                }
+            }
+            #endif
+        }
+
+        mutating func reportFailure(reason: String? = nil) {
+            indent -= 1
+            var failedAction = pendingActions.pop()
+            failedAction.outcome = .failed(reason)
+            actions.append((failedAction, indent))
+        }
+
+        func getLogString() -> String {
+            var logString = "Build log:\n"
+            for (action, indent) in actions {
+                let tab = String(repeating: " ", count: indent)
+                logString.append("\(tab)\(action.name): \(action.outcome)\n")
+            }
+            return logString
+        }
+
+        mutating func reset() {
+            assert(pendingActions.isEmpty, "We should have completed all pending build actions, either failed or succeeded.")
+            // This is basically equivalent with the statement above.
+            assert(indent == 0)
+            actions.removeAll()
         }
     }
-    private var buildStack = Stack<BuildingState>()
+
+
+    // The BuildLog records all `run` and `complete` calls on this ProgramBuilder, be it through mutation or generation.
+    #if DEBUG
+    // We definitely want to have the BuildLog in DEBUG builds.
+    var buildLog: BuildLog? = BuildLog()
+    #else
+    // We initialize this depending on the LogLevel in the initializer.
+    var buildLog: BuildLog? = nil
+    #endif
 
     /// Build random code at the current position in the program.
     ///
@@ -1550,117 +1842,41 @@ public class ProgramBuilder {
     /// Building code requires that there are visible variables available as inputs for CodeGenerators or as replacement variables for splicing.
     /// When building new programs, `buildPrefix()` can be used to generate some initial variables. `build()` purposely does not call
     /// `buildPrefix()` itself so that the budget isn't accidentally spent just on prefix code (which is probably less interesting).
-    public func build(n: Int = 1, by mode: BuildingMode = .generatingAndSplicing) {
-        assert(buildStack.isEmpty)
-        buildInternal(initialBuildingBudget: n, mode: mode)
-        assert(buildStack.isEmpty)
-    }
+    public func build(n budget: Int, by buildingMode: BuildingMode = .generatingAndSplicing) {
 
-    /// Recursive code building. Used by CodeGenerators for example to fill the bodies of generated blocks.
-    public func buildRecursive(block: Int = 1, of numBlocks: Int = 1, n optionalBudget: Int? = nil) {
-        assert(!buildStack.isEmpty)
-        let parentState = buildStack.top
+        /// The number of CodeGenerators we want to call per level.
+        let splitFactor = 2
 
-        assert(parentState.mode != .splicing)
-        assert(parentState.recursiveBuildingAllowed)        // If this fails, a recursive CodeGenerator is probably not marked as recursive.
-        assert(numBlocks >= 1)
-        assert(block >= 1 && block <= numBlocks)
-        assert(parentState.nextRecursiveBlockOfCurrentGenerator == block, "next = \(parentState.nextRecursiveBlockOfCurrentGenerator), block = \(block)")
-        assert((parentState.totalRecursiveBlocksOfCurrentGenerator ?? numBlocks) == numBlocks)
-
-        parentState.nextRecursiveBlockOfCurrentGenerator = block + 1
-        parentState.totalRecursiveBlocksOfCurrentGenerator = numBlocks
-
-        // Determine the budget for this recursive call as a fraction of the parent's initial budget.
-        var recursiveBudget: Double
-        if let specifiedBudget = parentState.recursiveBudget {
-            assert(specifiedBudget > 0)
-            recursiveBudget = Double(specifiedBudget)
+        // If the corpus is empty, we have to pick generating here, this is only relevant for the first sample.
+        let mode: BuildingMode = if fuzzer.corpus.isEmpty {
+            .generating
         } else {
-            let factor = Double.random(in: minRecursiveBudgetRelativeToParentBudget...maxRecursiveBudgetRelativeToParentBudget)
-            assert(factor > 0.0 && factor < 1.0)
-            let parentBudget = parentState.initialBudget
-            recursiveBudget = Double(parentBudget) * factor
+            if buildingMode == .generatingAndSplicing {
+                chooseUniform(from: [.generating, .splicing])
+            } else {
+                buildingMode
+            }
         }
 
-        // Now split the budget between all sibling blocks.
-        recursiveBudget /= Double(numBlocks)
-        recursiveBudget.round(.up)
-        assert(recursiveBudget >= 1.0)
-
-        // Finally, if a custom budget was requested, choose the smaller of the two values.
-        if let requestedBudget = optionalBudget {
-            assert(requestedBudget > 0)
-            recursiveBudget = min(recursiveBudget, Double(requestedBudget))
-        }
-
-        buildInternal(initialBuildingBudget: Int(recursiveBudget), mode: parentState.mode)
-    }
-
-    private func buildInternal(initialBuildingBudget: Int, mode: BuildingMode) {
-        assert(initialBuildingBudget > 0)
+        // Now depending on the budget we will do one of these things:
+        // 1. Large budget is still here. Pick a scheduled CodeGenerator, or a random CodeGenerator.
+        //   a. See if we can execute it immediately and call into build if it yields. (and split budgets).
+        //   b. if not, schedule it, pick a generator that get's us closer to the target context.
+        //   c. see if we need to solve input constraints of scheduled generators.
+        // 2. budget is low
+        //   a. Call scheduled GeneratorStubs or return.
 
         // Both splicing and code generation can sometimes fail, for example if no other program with the necessary features exists.
         // To avoid infinite loops, we bail out after a certain number of consecutive failures.
         var consecutiveFailures = 0
 
-        let state = BuildingState(initialBudget: initialBuildingBudget, mode: mode)
-        buildStack.push(state)
-        defer { buildStack.pop() }
-        var remainingBudget = initialBuildingBudget
+        var remainingBudget = budget
 
         // Unless we are only splicing, find all generators that have the required context. We must always have at least one suitable code generator.
         let origContext = context
-        var availableGenerators = WeightedList<CodeGenerator>()
-        if state.mode != .splicing {
-            availableGenerators = fuzzer.codeGenerators.filter({ $0.requiredContext.isSubset(of: origContext) })
-            assert(!availableGenerators.isEmpty)
-        }
-
-        struct BuildLog {
-            enum ActionOutcome {
-                case success
-                case failed
-            }
-
-            struct BuildAction {
-                var action: String
-                var outcome: ActionOutcome?
-            }
-
-            var actions = [BuildAction]()
-
-            mutating func startAction(_ action: String) {
-                // Make sure that we have either completed our last build step or we haven't started any build steps yet.
-                assert(actions.isEmpty || actions[actions.count - 1].outcome != nil)
-                actions.append(BuildAction(action: action))
-            }
-
-            mutating func endAction(withOutcome outcome: ActionOutcome) {
-                assert(!actions.isEmpty && actions[actions.count - 1].outcome == nil)
-                actions[actions.count - 1].outcome = outcome
-            }
-
-        }
-
-        var buildLog = fuzzer.config.logLevel.isAtLeast(.verbose) ? BuildLog() : nil
 
         while remainingBudget > 0 {
             assert(context == origContext, "Code generation or splicing must not change the current context")
-
-            if state.recursiveBuildingAllowed &&
-                remainingBudget < ProgramBuilder.minBudgetForRecursiveCodeGeneration &&
-                availableGenerators.contains(where: { !$0.isRecursive }) {
-                // No more recursion at this point since the remaining budget is too small.
-                state.recursiveBuildingAllowed = false
-                availableGenerators = availableGenerators.filter({ !$0.isRecursive })
-                assert(state.mode == .splicing || !availableGenerators.isEmpty)
-            }
-
-            var mode = state.mode
-            if mode == .generatingAndSplicing {
-                mode = chooseUniform(from: [.generating, .splicing])
-            }
 
             let codeSizeBefore = code.count
             switch mode {
@@ -1669,28 +1885,51 @@ public class ProgramBuilder {
                 // visible Variables. Therefore we should always have some Variables visible if we want to use them.
                 assert(hasVisibleVariables, "CodeGenerators assume that there are visible variables to use. Use buildPrefix() to generate some initial variables in a new program")
 
-                // Reset the code generator specific part of the state.
-                state.nextRecursiveBlockOfCurrentGenerator = 1
-                state.totalRecursiveBlocksOfCurrentGenerator = nil
+                var generator: CodeGenerator? = nil
 
+                // If the budget is low, we will pick a CodeGenerator that is directly usable from the current context.
+                // If we still have budget left, we will instead pick any CodeGenerator that is reachable from the current context, which means that we might go from .javascript to .wasmFunction.
+                if remainingBudget < ProgramBuilder.minBudgetForRecursiveCodeGeneration {
+                    generator = fuzzer.codeGenerators.filter({
+                        $0.requiredContext.isSubset(of: context)
+                    }).randomElement()
 
-                // Select a random generator and run it.
-                // Defensive guard for empty generator list
-                // Defensive guard: avoid trap when generator list is empty
-                // Defensive guard for empty generator list
-                if availableGenerators.isEmpty {
-                    logger.warning("No available generators in current context (visible vars: \(numberOfVisibleVariables)). Skipping this build step.")
-                    return   // simply skip this iteration instead of crashing
+                    guard generator != nil else {
+                        fatalError("need a callable generator from every context!")
+                    }
+                } else {
+                    var counter = 0
+                    // We now try to assemble a Generator that we want to use.
+                    while generator == nil {
+                        // If we haven't managed to find a suitable CodeGenerator, we will try again but only consider CodeGenerators that are reachable from the current context. This should always work.
+                        if counter == 10 {
+                            generator = fuzzer.codeGenerators.filter({
+                                $0.requiredContext.isSubset(of: context)
+                            }).randomElement()!
+                            break
+                        }
+                        // Select a random CodeGenerator that is reachable from the current context and run it.
+                        let reachableContexts = fuzzer.contextGraph.getReachableContexts(from: context)
+                        let possibleGenerators = fuzzer.codeGenerators.filter({ generator in
+                            reachableContexts.reduce(false) { res, reachable in
+                                return res || generator.requiredContext.isSubset(of: reachable)
+                            }
+                        })
+
+                        assert(!possibleGenerators.isEmpty)
+                        let randomGenerator = possibleGenerators.randomElement()
+                        // After having picked a generator, we might need to nest it in other generators that provide the necessary contexts.
+                        generator = assembleSyntheticGenerator(for: randomGenerator)
+                        counter += 1
+                    }
                 }
 
-                let generator = availableGenerators.randomElement()
-
-                buildLog?.startAction(generator.name)
-                run(generator)
+                // TODO: think about this and if we want to split this so that we get more CodeGenerators on the same level?
+                let _ = complete(generator: generator!, withBudget: remainingBudget / splitFactor)
 
             case .splicing:
                 let program = fuzzer.corpus.randomElementForSplicing()
-                buildLog?.startAction("splicing")
+                buildLog?.startAction("splicing", produces: [])
                 splice(from: program)
 
             default:
@@ -1701,24 +1940,29 @@ public class ProgramBuilder {
             let emittedInstructions = codeSizeAfter - codeSizeBefore
             remainingBudget -= emittedInstructions
             if emittedInstructions > 0 {
-                buildLog?.endAction(withOutcome: .success)
-                consecutiveFailures = 0
+                if mode == .splicing {
+                    buildLog?.succeedAction([])
+                }
             } else {
-                buildLog?.endAction(withOutcome: .failed)
+                if mode == .splicing {
+                    buildLog?.reportFailure()
+                }
                 consecutiveFailures += 1
                 guard consecutiveFailures < 10 else {
                     // When splicing, this is somewhat expected as we may not find code to splice if we're in a restricted
                     // context (e.g. we're inside a switch, but can't find another program with switch-cases).
                     // However, when generating code this should happen very rarely since we should always be able to
                     // generate code, not matter what context we are currently in.
-                    if state.mode != .splicing {
-                        logger.warning("Too many consecutive failures during code building with mode .\(state.mode). Bailing out.")
-                        if let actions = buildLog?.actions {
-                            logger.verbose("Build log:")
-                            for action in actions {
-                                logger.verbose("    \(action.action): \(action.outcome!)")
-                            }
+                    if mode != .splicing {
+                        if let log = buildLog {
+                            logger.verbose(log.getLogString())
                         }
+                    }
+                    // If we have requested generatingAndSplicing initially and
+                    // then decided to splice and fail here, we generate as a
+                    // fallback.
+                    if buildingMode == .generatingAndSplicing && mode == .splicing {
+                        build(n: budget, by: .generating)
                     }
                     return
                 }
@@ -1726,13 +1970,18 @@ public class ProgramBuilder {
         }
     }
 
+    // Like build(n:by) but forcing BuildingMode to generating. Splicing is an operation that
+    // affects the whole program, so we shouldn't roll a die on every buildRecursive() call in a
+    // code generator whether we'd want to splice an operation into the current block (which happens
+    // with the default mode .generatingAndSplicing).
+    public func buildRecursive(n budget: Int) {
+        build(n: budget, by: .generating)
+    }
+
     /// Run ValueGenerators until we have created at least N new variables.
     /// Returns both the number of generated instructions and of newly created variables.
     @discardableResult
     public func buildValues(_ n: Int) -> (generatedInstructions: Int, generatedVariables: Int) {
-        // Either we are in .javascript and see no variables, or we are in a wasm function and also don't see any variables.
-        assert(context.isValueBuildableContext)
-
         var valueGenerators = fuzzer.codeGenerators.filter({ $0.isValueGenerator })
         // Filter for the current context
         valueGenerators = valueGenerators.filter { context.contains($0.requiredContext) }
@@ -1746,18 +1995,17 @@ public class ProgramBuilder {
         // budget and allows us to run code generators when building recursively. We probably don't want to run
         // splicing here since splicing isn't as careful as code generation and may lead to invalid code more quickly.
         // The `initialBudget` isn't really used (since we specify a `recursiveBudget`), so can be an arbitrary value.
-        let state = BuildingState(initialBudget: 2 * n, mode: .generating)
-        state.recursiveBudget = n
-        buildStack.push(state)
-        defer { buildStack.pop() }
+
+        let currentBudget = 2 * n
 
         while numberOfVisibleVariables - previousNumberOfVisibleVariables < n {
-            let generator = valueGenerators.randomElement()
-            assert(generator.requiredContext.isValueBuildableContext && generator.inputs.count == 0)
 
-            state.nextRecursiveBlockOfCurrentGenerator = 1
-            state.totalRecursiveBlocksOfCurrentGenerator = nil
-            let numberOfGeneratedInstructions = run(generator)
+            let generator = valueGenerators.randomElement()
+
+            // Just fully run the generator without yielding back.
+            // Think about changing this and calling into the higher level build logic?
+            // TODO arbitrary budget here right now, change this to some split factor?
+            let numberOfGeneratedInstructions =  self.complete(generator: generator, withBudget: currentBudget / 5)
 
             assert(numberOfGeneratedInstructions > 0, "ValueGenerators must always succeed")
             totalNumberOfGeneratedInstructions += numberOfGeneratedInstructions
@@ -1776,7 +2024,7 @@ public class ProgramBuilder {
     public func buildPrefix() {
         // Each value generators should generate at least 3 variables, and we probably want to run at least a
         // few of them (maybe roughly >= 3), so the number of variables to build shouldn't be set too low.
-        assert(CodeGenerator.numberOfValuesToGenerateByValueGenerators == 3)
+        assert(GeneratorStub.numberOfValuesToGenerateByValueGenerators == 3)
         let numValuesToBuild = Int.random(in: 10...15)
 
         trace("Start of prefix code")
@@ -1785,12 +2033,276 @@ public class ProgramBuilder {
         trace("End of prefix code. \(numberOfVisibleVariables) variables are now visible")
     }
 
+    /// Builds into a `Context.wasmTypeGroup`.
+    /// This is called by the SpliceMutator and the CodeGenMutator to fix up the EndTypeGroup Instruction after building.
+    /// Needs to run from an adopting block.
+    public func buildIntoTypeGroup(endTypeGroupInstr instr: Instruction, by mode: BuildingMode) {
+        assert(instr.op is WasmEndTypeGroup)
+        assert(context.contains(.wasmTypeGroup))
+
+        // We need to update the inputs later, so take note of the visible variables here.
+        let oldVisibleVariables = visibleVariables
+
+        build(n: defaultCodeGenerationAmount, by: mode)
+
+        let newVisibleVariables = visibleVariables.filter { v in
+            let t = type(of: v)
+            return !oldVisibleVariables.contains(v) && t.wasmTypeDefinition?.description != .selfReference && t.Is(.wasmTypeDef())
+        }
+
+        let newOp = WasmEndTypeGroup(typesCount: instr.inputs.count + newVisibleVariables.count)
+        // We need to keep and adopt the inputs that are still there.
+        let newInputs = adopt(instr.inputs) + newVisibleVariables
+        // Adopt the old outputs and allocate new output variables for the new outputs
+        let newOutputs = adopt(instr.outputs) + newVisibleVariables.map { _ in
+            nextVariable()
+        }
+
+        append(Instruction(newOp, inouts: Array(newInputs) + newOutputs, flags: instr.flags))
+    }
+
+    // This function knows its own budget, and splits it to its yield points.
+    public func complete(generator: CodeGenerator, withBudget budget: Int) -> Int {
+        trace("Executing Generator \(generator.expandedName)")
+        let actionName = "Generator: " + generator.expandedName
+        buildLog?.startAction(actionName, produces: generator.produces)
+        let visibleVariablesBefore = visibleVariables
+
+        let depth = scheduled.count
+
+        // Split budget evenly at yield points.
+        let budgetPerYieldPoint = budget / generator.parts.count
+
+        var numberOfGeneratedInstructions = 0
+
+        // calculate all input requirements of this CodeGenerator.
+        let inputTypes = Set(generator.parts.reduce([]) { res, gen in
+            return res + gen.inputs.types
+        })
+
+        var availableTypes = inputTypes.filter {
+            randomVariable(ofType: $0) != nil
+        }
+
+        // Add the current context to the seen Contexts as well.
+        var seenContexts: [Context] = [context]
+
+        let contextsAndTypes = generator.parts.map { ($0.providedContext, $0.inputs.types) }
+
+        // Check if the can be produced along this generator, otherwise we need to bail.
+        for (contexts, types) in contextsAndTypes {
+            // We've seen the current context.
+            for context in contexts {
+                seenContexts.append(context)
+            }
+
+            for type in types {
+                // If we don't have the type available, check if we can produce it in the current context or a seen context.
+                if !availableTypes.contains(where: {
+                    type.Is($0)
+                }) {
+                    // Check if we have generators that can produce the type reachable from this context.
+                    let reachableContexts: Context = seenContexts.reduce(Context.empty) { res, ctx in [res, fuzzer.contextGraph.getReachableContexts(from: ctx).reduce(Context.empty) { res, ctx in [res, ctx]}]
+                    }
+
+                    // Right now this checks if the generator is a subset of the full reachable context (a single bitfield with all reachable contexts).
+                    // TODO: We need to also do some graph thingies here and add our requested types to the queue to see if we can fulfill the requested types. if we see that a generator produces a type, we need to put its input requirements onto the queue and start over?
+                    // Maybe overkill, but also cool.
+                    let callableGenerators = fuzzer.codeGenerators.filter {
+                        $0.requiredContext.isSubset(of: reachableContexts)
+                    }
+
+                    // Filter to see if they produce this type. Crucially to avoid dependency cycles, these also need to be valuegenerators.
+                    let canProduceThisType = callableGenerators.contains(where: { generator in
+                        generator.produces.contains(where: { $0.Is(type) })
+                    })
+
+                    // We cannot run if this is false.
+                    if !canProduceThisType {
+                        // TODO(cffsmith): track some statistics on how often this happens.
+                        buildLog?.reportFailure(reason: "Cannot produce type \(type) starting in original context \(context).")
+                        return 0
+                    } else {
+                        // Mark the type as available.
+                        availableTypes.insert(type)
+                    }
+                }
+            }
+        }
+
+        // Try to create the types that we need for this generator.
+        // At this point we've guaranteed that we can produce the types somewhere along the yield points of this generator.
+        createRequiredInputVariables(forTypes: inputTypes)
+
+        // Push the remaining stubs, we need to call them to close all Contexts properly.
+        for part in generator.tail.reversed() {
+            scheduled.push(part)
+        }
+
+        // This runs the first part of the generator.
+        numberOfGeneratedInstructions += self.run(generator.head)
+
+        // If this generator says it provides a context, it must do so, it cannot fail because we would not be able to continue with the rest of the generator.
+        // TODO(cffsmith): implement some forking / merging mode for the Code Object? that way we could "roll back" some changes.
+        let subsetContext = generator.head.providedContext.reduce(Context.empty) { res, context in
+            return [res, context]
+        }
+
+        assert(subsetContext.isSubset(of: context), "Generators that claim to provide contexts cannot fail to provide those contexts \(generator.head.name).")
+
+        // While our local stack is not removed, we need to call into build and call the scheduled stubs.
+        while scheduled.count > depth {
+            let codeSizePre = code.count
+            // Check if we need to or can create types here.
+            createRequiredInputVariables(forTypes: inputTypes)
+            // Build into the block.
+            buildRecursive(n: budgetPerYieldPoint)
+            // Call the next scheduled stub.
+            let _  = callNext()
+            numberOfGeneratedInstructions += code.count - codeSizePre
+        }
+
+        if numberOfGeneratedInstructions > 0 {
+            buildLog?.succeedAction(
+                Set(visibleVariables)
+                .subtracting(Set(visibleVariablesBefore))
+                .map(self.type)
+                )
+        } else {
+            buildLog?.reportFailure()
+        }
+
+        // I guess this is kind of implied by the logic above, yet if someone calls an extra closer in build somehow this would catch it.
+        assert(depth == scheduled.count, "Build stack is not balanced")
+        return numberOfGeneratedInstructions
+    }
+
+    // Todo, the context graph could also find ideal paths that allow type creation.
+    private func createRequiredInputVariables(forTypes types: Set<ILType>) {
+        for type in types {
+            if type.Is(.jsAnything) && context.contains(.javascript) {
+                let _ = findOrGenerateType(type)
+            } else {
+                if type.Is(.wasmAnything) && context.contains(.wasmFunction) {
+                    // Check if we can produce it with findOrGenerateWasmVar
+                    let _ = currentWasmFunction.generateRandomWasmVar(ofType: type)
+                }
+                if randomVariable(ofType: type) == nil {
+                    // Check for other CodeGenerators that can produce the given type in this context.
+                    let usableGenerators = fuzzer.codeGenerators.filter {
+                        $0.requiredContext.isSubset(of: context) &&
+                        $0.produces.contains {
+                            $0.Is(type)
+                        }
+                    }
+
+                    // Cannot build type here.
+                    if usableGenerators.isEmpty {
+                        // Continue here though, as we might be able to create Variables for other types.
+                        continue
+                    }
+
+                    let generator = usableGenerators.randomElement()
+
+                    let _ = complete(generator: generator, withBudget: 5)
+                }
+            }
+        }
+    }
+
+    // The `mainGenerator` is the actual generator that we want to run, we now might need to schedule other generators first to reach a necessary context.
+    public func assembleSyntheticGenerator(for mainGenerator: CodeGenerator) -> CodeGenerator? {
+        // We can directly run this CodeGenerator here.
+        if context.contains(mainGenerator.requiredContext) {
+            return mainGenerator
+        }
+
+        // Get all the generators for each edge and pick one of them.
+
+        // We might be in a context that is a union, e.g. .javascript | .subroutine. We then need to get all Paths from both possible single contexts.
+        let paths: [ContextGraph.Path] = Context.allCases.reduce([]) { pathArray, possibleContext in
+
+            if context.contains(possibleContext) {
+                // Walk through generated Graph and find a path.
+                let paths = fuzzer.contextGraph.getCodeGeneratorPaths(from: possibleContext, to: mainGenerator.requiredContext) ?? []
+                return pathArray + paths
+            }
+
+            return pathArray
+        }
+
+        if paths.isEmpty {
+            logger.warning("Found no paths in context \(context) for requested generator \(mainGenerator.name)")
+            return nil
+        }
+
+        // Pick a random path.
+        let path = chooseUniform(from: paths)
+
+        // For each edge in the path, pick a random generator.
+        // This is now a list of CodeGenerators, i.e. pairs of logical units.
+        let generators: [CodeGenerator] = path.randomConcretePath()
+
+        // So we can now assemble a synthetic generator that invokes our picked generator.
+        // We start by taking our first CodeGenerator, that will open the next context that is necessary.
+        // This is an incomplete CodeGenerator right now, as it only contains one part that opens a new context.
+        var syntheticGenerator = generators[0].parts
+
+        // For all other Stubs we will now successively insert the next CodeGenerator stubs into the right "spots".
+        //  <head_generator 1>
+        // We now try to insert the next part of the first CodeGenerator into our synthetic generator.
+        //  <head_generator 1> [some context] <tail_generator 1>
+        // We now go to the next Edge of our path and try to insert that head in the correct spot.
+        // <head_generator 1> [some context] <head_generator 2> [another context] <tail_generator 1>
+        // Since every part of the CodeGenerator requires its previous context, we can insert them in the right spot.
+        // At the very end, we will insert the actual CodeGenerator that we want to call.
+        // This essentially amounts to an insertion sort.
+        // (Because we might have CodeGenerators with multiple parts and different contexts, we cannot do this without sorting)
+        for subGenerator in generators[1...] + [mainGenerator] {
+            for (idx, part) in syntheticGenerator.enumerated() {
+                if part.providedContext.contains(where: { ctx in
+                    subGenerator.head.requiredContext.satisfied(by: ctx)
+                }) {
+                    // Insert this codegenerator here after this stub.
+                    syntheticGenerator.insert(contentsOf: subGenerator.parts, at: idx + 1)
+                    break
+                }
+            }
+        }
+
+        // This is our synthetic CodeGenerator.
+        return CodeGenerator("Synthetic", syntheticGenerator)
+    }
+
+    // Calls the next scheduled generator.
+    private func callNext() -> Int {
+        // Check if we should pass variables to this closer somehow?
+        if !scheduled.isEmpty {
+            let generator = scheduled.pop()
+            let generatedInstructions = self.run(generator)
+
+            let subsetContext = generator.providedContext.reduce(Context.empty) { res, context in
+                return [res, context]
+            }
+
+            assert(subsetContext.isSubset(of: context), "Generators that claim to provide contexts cannot fail to provide those contexts \(generator.name).")
+
+
+            return generatedInstructions
+        } else {
+            return 0
+        }
+    }
+
     /// Runs a code generator in the current context and returns the number of generated instructions.
     @discardableResult
-    private func run(_ generator: CodeGenerator) -> Int {
-        assert(generator.requiredContext.isSubset(of: context))
+    private func run(_ generator: GeneratorStub) -> Int {
+        // Any of the required Context constraints need to be satisfied.
+        assert(generator.requiredContext.satisfied(by: context))
+        let visibleVariablesBefore = visibleVariables
 
         trace("Executing code generator \(generator.name)")
+        buildLog?.startAction(generator.name, produces: generator.produces)
         var inputs = [Variable]()
         switch generator.inputs.mode {
         case .loose:
@@ -1802,6 +2314,11 @@ public class ProgramBuilder {
             for inputType in generator.inputs.types {
                 guard let input = randomVariable(ofType: inputType) else {
                     // Cannot run this generator
+                    if generator.providedContext != [] {
+                        fatalError("This generator is supposed to provide a context but cannot as we've failed to find the necessary inputs.")
+                    }
+                    // This early return also needs to report a failure.
+                    buildLog?.reportFailure(reason: "Cannot find variable that satifies input constraints \(inputType).")
                     return 0
                 }
                 inputs.append(input)
@@ -1812,7 +2329,13 @@ public class ProgramBuilder {
 
         if numGeneratedInstructions > 0 {
             contributors.insert(generator)
-            generator.addedInstructions(numGeneratedInstructions)
+            buildLog?.succeedAction(
+                Set(visibleVariables)
+                .subtracting(Set(visibleVariablesBefore))
+                .map(self.type)
+                )
+        } else {
+            buildLog?.reportFailure(reason: "Generator itself failed to produce any instructions.")
         }
 
         return numGeneratedInstructions
@@ -1826,8 +2349,23 @@ public class ProgramBuilder {
     // Each class implementing the Operation protocol will have a constructor here.
     //
 
+    private func handleInputTypeFailure(_ message: String) {
+        logger.warning(message)
+        if fuzzer.config.enableDiagnostics {
+            do {
+                let program = Program(with: self.code)
+                let pb = try program.asProtobuf().serializedData()
+                fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "WasmProgramBuildingEmissionFail", content: pb))
+            } catch {
+                logger.warning("Could not dump program to disk!")
+            }
+        }
+        // Fail on debug builds.
+        assert(false, message)
+    }
+
     @discardableResult
-    private func emit(_ op: Operation, withInputs inputs: [Variable] = []) -> Instruction {
+    public func emit(_ op: Operation, withInputs inputs: [Variable] = [], types: [ILType]? = nil) -> Instruction {
         var inouts = inputs
         for _ in 0..<op.numOutputs {
             inouts.append(nextVariable())
@@ -1837,21 +2375,16 @@ public class ProgramBuilder {
         }
 
         // For WasmOperations, we can assert here that the input types are correct.
-        if let op = op as? WasmOperation {
-            for (i, input) in inputs.enumerated() {
-                if !type(of:input).Is(op.inputTypes[i]) {
-                    // TODO: try to make sure that mutations don't change the assumptions while ProgramBuilding.
-                    logger.warning("Input types don't match expected types. Check if the types in your instruction definition are correct or if you are passing the wrong type to this instruction!")
-                    logger.warning("Mutations might have also changed this, in which case lifting will likely fail.")
-                    if fuzzer.config.enableDiagnostics {
-                        do {
-                            let program = Program(with: self.code)
-                            let pb = try program.asProtobuf().serializedData()
-                            fuzzer.dispatchEvent(fuzzer.events.DiagnosticsEvent, data: (name: "WasmProgramBuildingEmissionFail", content: pb))
-                        } catch {
-                            logger.warning("Could not dump program to disk!")
-                        }
-                    }
+        if let expectedTypes = types {
+            // TODO: try to make sure that mutations don't change the assumptions while ProgramBuilding.
+            if inputs.count != expectedTypes.count {
+                handleInputTypeFailure("expected \(expectedTypes.count) inputs, actual \(inputs.count)")
+            }
+            zip(inputs, expectedTypes).enumerated().forEach { n, pair in
+                let (input, type) = pair
+                let actualType = self.type(of: input)
+                if !actualType.Is(type) {
+                    handleInputTypeFailure("Invalid input \(n + 1) \(input) with type \(actualType), expected \(type)")
                 }
             }
         }
@@ -1875,8 +2408,14 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func loadString(_ value: String) -> Variable {
-        return emit(LoadString(value: value)).output
+    public func loadString(_ value: String, customName: String? = nil) -> Variable {
+        return emit(LoadString(value: value, customName: customName)).output
+    }
+
+    @discardableResult
+    public func loadEnum(_ type: ILType) -> Variable {
+        assert(type.isEnumeration)
+        return loadString(chooseUniform(from: type.enumValues), customName: type.group)
     }
 
     @discardableResult
@@ -2019,6 +2558,7 @@ public class ProgramBuilder {
         public fileprivate(set) var instanceElements: [Int64] = []
         public fileprivate(set) var instanceComputedProperties: [Variable] = []
         public fileprivate(set) var instanceMethods: [String] = []
+        public fileprivate(set) var instanceComputedMethods: [Variable] = []
         public fileprivate(set) var instanceGetters: [String] = []
         public fileprivate(set) var instanceSetters: [String] = []
 
@@ -2026,6 +2566,7 @@ public class ProgramBuilder {
         public fileprivate(set) var staticElements: [Int64] = []
         public fileprivate(set) var staticComputedProperties: [Variable] = []
         public fileprivate(set) var staticMethods: [String] = []
+        public fileprivate(set) var staticComputedMethods: [Variable] = []
         public fileprivate(set) var staticGetters: [String] = []
         public fileprivate(set) var staticSetters: [String] = []
 
@@ -2077,6 +2618,13 @@ public class ProgramBuilder {
             b.emit(EndClassInstanceMethod())
         }
 
+        public func addInstanceComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
+            let instr = b.emit(BeginClassInstanceComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassInstanceComputedMethod())
+        }
+
         public func addInstanceGetter(for name: String, _ body: (_ this: Variable) -> ()) {
             let instr = b.emit(BeginClassInstanceGetter(propertyName: name))
             body(instr.innerOutput)
@@ -2117,6 +2665,13 @@ public class ProgramBuilder {
             b.emit(EndClassStaticMethod())
         }
 
+        public func addStaticComputedMethod(_ name: Variable, with descriptor: SubroutineDescriptor, _ body: ([Variable]) -> ()) {
+            b.setParameterTypesForNextSubroutine(descriptor.parameterTypes)
+            let instr = b.emit(BeginClassStaticComputedMethod(parameters: descriptor.parameters), withInputs: [name])
+            body(Array(instr.innerOutputs))
+            b.emit(EndClassStaticComputedMethod())
+        }
+
         public func addStaticGetter(for name: String, _ body: (_ this: Variable) -> ()) {
             let instr = b.emit(BeginClassStaticGetter(propertyName: name))
             body(instr.innerOutput)
@@ -2155,9 +2710,9 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func buildClassDefinition(withSuperclass superclass: Variable? = nil, _ body: (ClassDefinition) -> ()) -> Variable {
+    public func buildClassDefinition(withSuperclass superclass: Variable? = nil, isExpression: Bool = false, _ body: (ClassDefinition) -> ()) -> Variable {
         let inputs = superclass != nil ? [superclass!] : []
-        let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil), withInputs: inputs).output
+        let output = emit(BeginClassDefinition(hasSuperclass: superclass != nil, isExpression: isExpression), withInputs: inputs).output
         if enableRecursionGuard { hide(output) }
         body(currentClassDefinition)
         if enableRecursionGuard { unhide(output) }
@@ -2196,8 +2751,8 @@ public class ProgramBuilder {
         return emit(GetProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object]).output
     }
 
-    public func setProperty(_ name: String, of object: Variable, to value: Variable) {
-        emit(SetProperty(propertyName: name), withInputs: [object, value])
+    public func setProperty(_ name: String, of object: Variable, to value: Variable, guard isGuarded: Bool = false) {
+        emit(SetProperty(propertyName: name, isGuarded: isGuarded), withInputs: [object, value])
     }
 
     public func updateProperty(_ name: String, of object: Variable, with value: Variable, using op: BinaryOperator) {
@@ -2337,7 +2892,7 @@ public class ProgramBuilder {
         // Currently, this information is also fully contained in the parameterTypes member. However, if we ever
         // add support for features such as parameter destructuring, this would no longer be the case.
         public let parameters: Parameters
-        // Type information for every parameter. If no type information is specified, the parameters will all use .anything as type.
+        // Type information for every parameter. If no type information is specified, the parameters will all use .jsAnything as type.
         public let parameterTypes: ParameterList
 
         public var count: Int {
@@ -2365,7 +2920,7 @@ public class ProgramBuilder {
                 self.parameterTypes = types
             } else {
                 self.parameterTypes = ParameterList(numParameters: parameters.count, hasRestParam: parameters.hasRestParameter)
-                assert(self.parameterTypes.allSatisfy({ $0 == .plain(.anything) || $0 == .rest(.anything) }))
+                assert(self.parameterTypes.allSatisfy({ $0 == .plain(.jsAnything) || $0 == .rest(.jsAnything) }))
             }
             self.parameters = parameters
         }
@@ -2460,6 +3015,12 @@ public class ProgramBuilder {
         }
     }
 
+    public func maybeReturnRandomJsVariable(_ prob: Double) {
+        if probability(prob) {
+            doReturn(randomJsVariable())
+        }
+    }
+
     @discardableResult
     public func yield(_ value: Variable? = nil) -> Variable {
         if let argument = value {
@@ -2514,6 +3075,11 @@ public class ProgramBuilder {
     @discardableResult
     public func bindMethod(_ name: String, on object: Variable) -> Variable {
         return emit(BindMethod(methodName: name), withInputs: [object]).output
+    }
+
+    @discardableResult
+    public func bindFunction(_ fct: Variable, boundArgs arguments: [Variable]) -> Variable {
+        return emit(BindFunction(numInputs: arguments.count + 1), withInputs: [fct] + arguments).output
     }
 
     @discardableResult
@@ -2590,6 +3156,25 @@ public class ProgramBuilder {
     @discardableResult
     public func createNamedVariable(forBuiltin builtinName: String) -> Variable {
         return createNamedVariable(builtinName, declarationMode: .none)
+    }
+
+    @discardableResult
+    public func createNamedDisposableVariable(_ name: String, _ initialValue: Variable) -> Variable {
+        return emit(CreateNamedDisposableVariable(name), withInputs: [initialValue]).output
+    }
+
+    @discardableResult
+    public func createNamedAsyncDisposableVariable(_ name: String, _ initialValue: Variable) -> Variable {
+        return emit(CreateNamedAsyncDisposableVariable(name), withInputs: [initialValue]).output
+    }
+
+    @discardableResult
+    public func createSymbolProperty(_ name: String) -> Variable {
+        let Symbol = createNamedVariable(forBuiltin: "Symbol")
+        // The Symbol constructor is just a "side effect" and probably
+        // shouldn't be used by following generators.
+        hide(Symbol)
+        return getProperty(name, of: Symbol)
     }
 
     @discardableResult
@@ -2841,11 +3426,12 @@ public class ProgramBuilder {
 
     @discardableResult
     public func createWasmMemory(minPages: Int, maxPages: Int? = nil, isShared: Bool = false, isMemory64: Bool = false) -> Variable {
+        assert(!isShared || maxPages != nil, "Shared memories must have a maximum size")
         return emit(CreateWasmMemory(limits: Limits(min: minPages, max: maxPages), isShared: isShared, isMemory64: isMemory64)).output
     }
 
-    public func createWasmTable(elementType: ILType, limits: Limits) -> Variable {
-        return emit(CreateWasmTable(elementType: elementType, limits: limits)).output
+    public func createWasmTable(elementType: ILType, limits: Limits, isTable64: Bool) -> Variable {
+        return emit(CreateWasmTable(elementType: elementType, limits: limits, isTable64: isTable64)).output
     }
 
     @discardableResult
@@ -2854,8 +3440,8 @@ public class ProgramBuilder {
     }
 
     @discardableResult
-    public func createWasmTag(parameterTypes: ParameterList) -> Variable {
-        return emit(CreateWasmTag(parameters: parameterTypes)).output
+    public func createWasmTag(parameterTypes: [ILType]) -> Variable {
+        return emit(CreateWasmTag(parameterTypes: parameterTypes)).output
     }
 
     @discardableResult
@@ -2870,11 +3456,13 @@ public class ProgramBuilder {
 
     public class WasmFunction {
         private let b: ProgramBuilder
-        let signature: Signature
+        let signature: WasmSignature
+        let jsSignature: Signature
 
-        public init(forBuilder b: ProgramBuilder, withSignature signature: Signature) {
+        public init(forBuilder b: ProgramBuilder, withSignature signature: WasmSignature) {
             self.b = b
             self.signature = signature
+            self.jsSignature = convertWasmSignatureToJsSignature(signature)
         }
 
         // Wasm Instructions
@@ -2889,6 +3477,15 @@ public class ProgramBuilder {
         }
 
         @discardableResult
+        public func memoryArgument(_ value: Int64, _ memoryTypeInfo: WasmMemoryType) -> Variable {
+            if (memoryTypeInfo.isMemory64) {
+                return self.consti64(value)
+            } else {
+                return self.consti32(Int32(value))
+            }
+        }
+
+        @discardableResult
         public func constf32(_ value: Float32) -> Variable {
             return b.emit(Constf32(value: value)).output
         }
@@ -2900,225 +3497,277 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmi64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
-            return b.emit(Wasmi64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmi64, .wasmi64]).output
         }
 
         @discardableResult
         public func wasmi32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmIntegerBinaryOpKind) -> Variable {
-            return b.emit(Wasmi32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmi32, .wasmi32]).output
         }
 
         @discardableResult
         public func wasmf32BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
-            return b.emit(Wasmf32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf32BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmf32, .wasmf32]).output
         }
 
         @discardableResult
         public func wasmf64BinOp(_ lhs: Variable, _ rhs: Variable, binOpKind: WasmFloatBinaryOpKind) -> Variable {
-            return b.emit(Wasmf64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf64BinOp(binOpKind: binOpKind), withInputs: [lhs, rhs], types: [.wasmf64, .wasmf64]).output
         }
 
         @discardableResult
         public func wasmi32UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
-            return b.emit(Wasmi32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmi32UnOp(unOpKind: unOpKind), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func wasmi64UnOp(_ input: Variable, unOpKind: WasmIntegerUnaryOpKind) -> Variable {
-            return b.emit(Wasmi64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmi64UnOp(unOpKind: unOpKind), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func wasmf32UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
-            return b.emit(Wasmf32UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmf32UnOp(unOpKind: unOpKind), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func wasmf64UnOp(_ input: Variable, unOpKind: WasmFloatUnaryOpKind) -> Variable {
-            return b.emit(Wasmf64UnOp(unOpKind: unOpKind), withInputs: [input]).output
+            return b.emit(Wasmf64UnOp(unOpKind: unOpKind), withInputs: [input],types: [.wasmf64]).output
         }
 
         @discardableResult
         public func wasmi32EqualZero(_ input: Variable) -> Variable {
-            return b.emit(Wasmi32EqualZero(), withInputs: [input]).output
+            return b.emit(Wasmi32EqualZero(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func wasmi64EqualZero(_ input: Variable) -> Variable {
-            return b.emit(Wasmi64EqualZero(), withInputs: [input]).output
+            return b.emit(Wasmi64EqualZero(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func wasmi32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
-            return b.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmi32, .wasmi32]).output
         }
 
         @discardableResult
         public func wasmi64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmIntegerCompareOpKind) -> Variable {
-            return b.emit(Wasmi64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmi64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmi64, .wasmi64]).output
         }
 
         @discardableResult
         public func wasmf64CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
-            return b.emit(Wasmf64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf64CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmf64, .wasmf64]).output
         }
 
         @discardableResult
         public func wasmf32CompareOp(_ lhs: Variable, _ rhs: Variable, using compareOperator: WasmFloatCompareOpKind) -> Variable {
-            return b.emit(Wasmf32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs]).output
+            return b.emit(Wasmf32CompareOp(compareOpKind: compareOperator), withInputs: [lhs, rhs], types: [.wasmf32, .wasmf32]).output
         }
 
         @discardableResult
         public func wrapi64Toi32(_ input: Variable) -> Variable {
-            return b.emit(WasmWrapi64Toi32(), withInputs: [input]).output
+            return b.emit(WasmWrapi64Toi32(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func truncatef32Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef32Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef32Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncatef64Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef64Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef64Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func extendi32Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmExtendi32Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmExtendi32Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func truncatef32Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef32Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef32Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncatef64Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncatef64Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncatef64Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func converti32Tof32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti32Tof32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti32Tof32(isSigned: isSigned), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func converti64Tof32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti64Tof32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti64Tof32(isSigned: isSigned), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func demotef64Tof32(_ input: Variable) -> Variable {
-            return b.emit(WasmDemotef64Tof32(), withInputs: [input]).output
+            return b.emit(WasmDemotef64Tof32(), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func converti32Tof64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti32Tof64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti32Tof64(isSigned: isSigned), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func converti64Tof64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmConverti64Tof64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmConverti64Tof64(isSigned: isSigned), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func promotef32Tof64(_ input: Variable) -> Variable {
-            return b.emit(WasmPromotef32Tof64(), withInputs: [input]).output
+            return b.emit(WasmPromotef32Tof64(), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func reinterpretf32Asi32(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpretf32Asi32(), withInputs: [input]).output
+            return b.emit(WasmReinterpretf32Asi32(), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func reinterpretf64Asi64(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpretf64Asi64(), withInputs: [input]).output
+            return b.emit(WasmReinterpretf64Asi64(), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func reinterpreti32Asf32(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpreti32Asf32(), withInputs: [input]).output
+            return b.emit(WasmReinterpreti32Asf32(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func reinterpreti64Asf64(_ input: Variable) -> Variable {
-            return b.emit(WasmReinterpreti64Asf64(), withInputs: [input]).output
+            return b.emit(WasmReinterpreti64Asf64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func signExtend8Intoi32(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend8Intoi32(), withInputs: [input]).output
+            return b.emit(WasmSignExtend8Intoi32(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func signExtend16Intoi32(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend16Intoi32(), withInputs: [input]).output
+            return b.emit(WasmSignExtend16Intoi32(), withInputs: [input], types: [.wasmi32]).output
         }
 
         @discardableResult
         public func signExtend8Intoi64(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend8Intoi64(), withInputs: [input]).output
+            return b.emit(WasmSignExtend8Intoi64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func signExtend16Intoi64(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend16Intoi64(), withInputs: [input]).output
+            return b.emit(WasmSignExtend16Intoi64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func signExtend32Intoi64(_ input: Variable) -> Variable {
-            return b.emit(WasmSignExtend32Intoi64(), withInputs: [input]).output
+            return b.emit(WasmSignExtend32Intoi64(), withInputs: [input], types: [.wasmi64]).output
         }
 
         @discardableResult
         public func truncateSatf32Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf32Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf32Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncateSatf64Toi32(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf64Toi32(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf64Toi32(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func truncateSatf32Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf32Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf32Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf32]).output
         }
 
         @discardableResult
         public func truncateSatf64Toi64(_ input: Variable, isSigned: Bool) -> Variable {
-            return b.emit(WasmTruncateSatf64Toi64(isSigned: isSigned), withInputs: [input]).output
+            return b.emit(WasmTruncateSatf64Toi64(isSigned: isSigned), withInputs: [input], types: [.wasmf64]).output
         }
 
         @discardableResult
         public func wasmLoadGlobal(globalVariable: Variable) -> Variable {
             let type = b.type(of: globalVariable).wasmGlobalType!.valueType
-            return b.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable]).output
+            return b.emit(WasmLoadGlobal(globalType: type), withInputs:[globalVariable], types: [ILType.object(ofGroup: "WasmGlobal")]).output
         }
 
         public func wasmStoreGlobal(globalVariable: Variable, to value: Variable) {
             let type = b.type(of: globalVariable).wasmGlobalType!.valueType
-            b.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value])
+            let inputTypes = [ILType.object(ofGroup: "WasmGlobal", withWasmType: WasmGlobalType(valueType: type, isMutable: true)), type]
+            b.emit(WasmStoreGlobal(globalType: type), withInputs: [globalVariable, value], types: inputTypes)
         }
 
         @discardableResult
         public func wasmTableGet(tableRef: Variable, idx: Variable) -> Variable {
             let tableType = b.type(of: tableRef)
-            return b.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx]).output
+            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmTableGet(tableType: tableType), withInputs: [tableRef, idx], types: [tableType, offsetType]).output
         }
 
         public func wasmTableSet(tableRef: Variable, idx: Variable, to value: Variable) {
             let tableType = b.type(of: tableRef)
-            b.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value])
+            let elementType = tableType.wasmTableType!.elementType
+            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmTableSet(tableType: tableType), withInputs: [tableRef, idx, value], types: [tableType, offsetType, elementType])
         }
 
         @discardableResult
-        public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: Signature) -> Variable? {
-            let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args)
-            if (signature.outputType.Is(.nothing)) {
+        public func wasmTableSize(table: Variable) -> Variable {
+            return b.emit(WasmTableSize(), withInputs: [table],
+                types: [.object(ofGroup: "WasmTable")]).output
+        }
+
+        @discardableResult
+        public func wasmTableGrow(table: Variable, with initialValue: Variable, by delta: Variable) -> Variable {
+            let tableType = b.type(of: table)
+            let elementType = tableType.wasmTableType!.elementType
+            let offsetType = tableType.wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmTableGrow(), withInputs: [table, initialValue, delta],
+                types: [.object(ofGroup: "WasmTable"), elementType, offsetType]).output
+        }
+
+        @discardableResult
+        public func wasmCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) -> [Variable] {
+            let isTable64 = b.type(of: table).wasmTableType!.isTable64
+            return Array(b.emit(WasmCallIndirect(signature: signature),
+                withInputs: [table] + functionArgs + [tableIndex],
+                types: [.wasmTable] + signature.parameterTypes + [isTable64 ? .wasmi64 : .wasmi32]
+            ).outputs)
+        }
+
+        @discardableResult
+        public func wasmCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) -> [Variable] {
+            return Array(b.emit(WasmCallDirect(signature: signature),
+                withInputs: [function] + functionArgs,
+                types: [.wasmFunctionDef(signature)] + signature.parameterTypes
+            ).outputs)
+        }
+
+        public func wasmReturnCallDirect(signature: WasmSignature, function: Variable, functionArgs: [Variable]) {
+            assert(self.signature.outputTypes == signature.outputTypes)
+            b.emit(WasmReturnCallDirect(signature: signature),
+                withInputs: [function] + functionArgs,
+                types: [.wasmFunctionDef(signature)] + signature.parameterTypes)
+        }
+
+        public func wasmReturnCallIndirect(signature: WasmSignature, table: Variable, functionArgs: [Variable], tableIndex: Variable) {
+            let isTable64 = b.type(of: table).wasmTableType!.isTable64
+            assert(self.signature.outputTypes == signature.outputTypes)
+            b.emit(WasmReturnCallIndirect(signature: signature),
+                withInputs: [table] + functionArgs + [tableIndex],
+                types: [.wasmTable] + signature.parameterTypes + [isTable64 ? .wasmi64 : .wasmi32])
+        }
+
+        @discardableResult
+        public func wasmJsCall(function: Variable, withArgs args: [Variable], withWasmSignature signature: WasmSignature) -> Variable? {
+            let instr = b.emit(WasmJsCall(signature: signature), withInputs: [function] + args,
+                types: [.function() | .object(ofGroup: "WasmSuspendingObject")] + signature.parameterTypes)
+            if signature.outputTypes.isEmpty {
                 assert(!instr.hasOutputs)
                 return nil
             } else {
@@ -3129,14 +3778,106 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmMemoryLoad(memory: Variable, dynamicOffset: Variable, loadType: WasmMemoryLoadType, staticOffset: Int64) -> Variable {
-            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            return b.emit(WasmMemoryLoad(loadType: loadType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset], types: [.object(ofGroup: "WasmMemory"), addrType]).output
         }
 
         public func wasmMemoryStore(memory: Variable, dynamicOffset: Variable, value: Variable, storeType: WasmMemoryStoreType, staticOffset: Int64) {
             assert(b.type(of: value) == storeType.numberType())
-            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset, value])
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            let inputTypes = [ILType.object(ofGroup: "WasmMemory"), addrType, storeType.numberType()]
+            b.emit(WasmMemoryStore(storeType: storeType, staticOffset: staticOffset), withInputs: [memory, dynamicOffset, value], types: inputTypes)
+        }
+
+        @discardableResult
+        func wasmAtomicLoad(memory: Variable, address: Variable, loadType: WasmAtomicLoadType, offset: Int64) -> Variable {
+            let op = WasmAtomicLoad(loadType: loadType, offset: offset)
+            return b.emit(op, withInputs: [memory, address]).output
+        }
+
+        func wasmAtomicStore(memory: Variable, address: Variable, value: Variable, storeType: WasmAtomicStoreType, offset: Int64) {
+            let op = WasmAtomicStore(storeType: storeType, offset: offset)
+            b.emit(op, withInputs: [memory, address, value])
+        }
+
+        @discardableResult
+        func wasmAtomicRMW(memory: Variable, lhs: Variable, rhs: Variable, op: WasmAtomicRMWType, offset: Int64) -> Variable {
+            let op = WasmAtomicRMW(op: op, offset: offset)
+            let anyInt: ILType = .wasmi32 | .wasmi64
+            let valueType = op.op.type()
+            return b.emit(op, withInputs: [memory, lhs, rhs], types: [.object(ofGroup: "WasmMemory"), anyInt, valueType]).output
+        }
+
+        @discardableResult
+        func wasmAtomicCmpxchg(memory: Variable, address: Variable, expected: Variable, replacement: Variable, op: WasmAtomicCmpxchgType, offset: Int64) -> Variable {
+            let op = WasmAtomicCmpxchg(op: op, offset: offset)
+            let anyInt: ILType = .wasmi32 | .wasmi64
+            let valueType = op.op.type()
+            return b.emit(op, withInputs: [memory, address, expected, replacement], types: [.object(ofGroup: "WasmMemory"), anyInt, valueType, valueType]).output
+        }
+
+        @discardableResult
+        public func wasmMemorySize(memory: Variable) -> Variable {
+            return b.emit(WasmMemorySize(), withInputs: [memory],
+                types: [.object(ofGroup: "WasmMemory")]).output
+        }
+
+        @discardableResult
+        public func wasmMemoryGrow(memory: Variable, growByPages: Variable) -> Variable {
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            return b.emit(WasmMemoryGrow(), withInputs: [memory, growByPages],
+                types: [.object(ofGroup: "WasmMemory"), addrType]).output
+        }
+
+        public func wasmMemoryCopy(dstMemory: Variable, srcMemory: Variable,  dstOffset: Variable, srcOffset: Variable, size: Variable) {
+            let dstMemoryType = b.type(of: dstMemory).wasmMemoryType!
+            let srcMemoryType = b.type(of: srcMemory).wasmMemoryType!
+            assert(dstMemoryType.isMemory64 == srcMemoryType.isMemory64)
+
+            let addrType = dstMemoryType.addrType
+            b.emit(WasmMemoryCopy(), withInputs: [dstMemory, srcMemory, dstOffset, srcOffset, size],
+                types: [.object(ofGroup: "WasmMemory"), .object(ofGroup: "WasmMemory"), addrType, addrType, addrType])
+        }
+
+        public func wasmMemoryFill(memory: Variable, offset: Variable, byteToSet: Variable, nrOfBytesToUpdate: Variable) {
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            b.emit(WasmMemoryFill(), withInputs: [memory, offset, byteToSet, nrOfBytesToUpdate],
+                types: [.object(ofGroup: "WasmMemory"), addrType, .wasmi32, addrType])
+        }
+
+        public func wasmMemoryInit(dataSegment: Variable, memory: Variable, memoryOffset: Variable, dataSegmentOffset: Variable, nrOfBytesToUpdate: Variable) {
+            let addrType = b.type(of: memory).wasmMemoryType!.addrType
+            b.emit(WasmMemoryInit(), withInputs: [dataSegment, memory, memoryOffset, dataSegmentOffset, nrOfBytesToUpdate],
+                types: [.wasmDataSegment(), .object(ofGroup: "WasmMemory"), addrType, .wasmi32, .wasmi32])
+        }
+
+        public func wasmDropDataSegment(dataSegment: Variable) {
+            b.emit(WasmDropDataSegment(), withInputs: [dataSegment], types: [.wasmDataSegment()])
+        }
+
+        public func wasmDropElementSegment(elementSegment: Variable) {
+            b.emit(WasmDropElementSegment(), withInputs: [elementSegment], types: [.wasmElementSegment()])
+        }
+
+        public func wasmTableInit(elementSegment: Variable, table: Variable, tableOffset: Variable, elementSegmentOffset: Variable, nrOfElementsToUpdate: Variable) {
+            let elementSegmentType = ILType.wasmFuncRef
+            let tableElemType = b.type(of: table).wasmTableType!.elementType
+            assert(elementSegmentType.Is(tableElemType))
+
+            let addrType = b.type(of: table).wasmTableType!.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmTableInit(), withInputs: [elementSegment, table, tableOffset, elementSegmentOffset, nrOfElementsToUpdate],
+                types: [.wasmElementSegment(), .object(ofGroup: "WasmTable"), addrType, .wasmi32, .wasmi32])
+        }
+
+        public func wasmTableCopy(dstTable: Variable, srcTable: Variable, dstOffset: Variable, srcOffset: Variable, count: Variable) {
+            let dstTableType = b.type(of: dstTable).wasmTableType!
+            let srcTableType = b.type(of: srcTable).wasmTableType!
+            assert(dstTableType.isTable64 == srcTableType.isTable64)
+            assert(srcTableType.elementType.Is(dstTableType.elementType))
+
+            let addrType = dstTableType.isTable64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmTableCopy(), withInputs: [dstTable, srcTable, dstOffset, srcOffset, count],
+                types: [.object(ofGroup: "WasmTable"), .object(ofGroup: "WasmTable"), addrType, addrType, addrType])
         }
 
         public func wasmReassign(variable: Variable, to: Variable) {
@@ -3149,83 +3890,144 @@ public class ProgramBuilder {
             case valueType(ILType)
         }
 
-        // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
-        // TODO(cffsmith): I think the best way to handle these types of blocks is to treat them like inline functions that have a signature. E.g. they behave like a definition and call of a wasmfunction. The output should be the output of the signature.
-        public func wasmBuildBlock(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> ()) {
-            assert(signature.parameters.count == args.count)
-            assert(signature.outputType == .nothing)
-            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
+        // The first innerOutput of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
+        public func wasmBuildBlock(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> ()) {
+            assert(signature.outputTypes.count == 0)
+            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            b.emit(WasmEndBlock(outputType: signature.outputType))
+            b.emit(WasmEndBlock(outputTypes: []))
         }
 
         @discardableResult
-        public func wasmBuildBlockWithResult(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Variable) -> Variable {
-            assert(signature.parameters.count == args.count)
-            assert(signature.outputType != .nothing)
-            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args)
-            let result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return b.emit(WasmEndBlock(outputType: signature.outputType), withInputs: [result]).output
+        public func wasmBuildBlockWithResults(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            let instr = b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
+            let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndBlock(outputTypes: signature.outputTypes), withInputs: results, types: signature.outputTypes).outputs)
+        }
+
+        // Convenience function to begin a wasm block. Note that this does not emit an end block.
+        func wasmBeginBlock(with signature: WasmSignature, args: [Variable]) {
+            b.emit(WasmBeginBlock(with: signature), withInputs: args, types: signature.parameterTypes)
+        }
+        // Convenience function to end a wasm block.
+        func wasmEndBlock(outputTypes: [ILType], args: [Variable]) {
+            b.emit(WasmEndBlock(outputTypes: outputTypes), withInputs: args, types: outputTypes)
+        }
+
+        private func checkArgumentsMatchLabelType(label: ILType, args: [Variable]) {
+            let parameterTypes = label.wasmLabelType!.parameters
+            let errorMsg = "label type \(label) doesn't match argument types \(args.map({b.type(of: $0)}))"
+            assert(parameterTypes.count == args.count, errorMsg)
+            // Each argument type must be a subtype of the corresponding label's parameter type.
+            assert(zip(parameterTypes, args).allSatisfy {b.type(of: $0.1).Is($0.0)}, errorMsg)
         }
 
         // This can branch to label variables only, has a variable input for dataflow purposes.
         public func wasmBranch(to label: Variable, args: [Variable] = []) {
-            assert(b.type(of: label).Is(.anyLabel))
-            b.emit(WasmBranch(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args)
+            let labelType = b.type(of: label)
+            checkArgumentsMatchLabelType(label: labelType, args: args)
+            b.emit(WasmBranch(labelTypes: labelType.wasmLabelType!.parameters), withInputs: [label] + args)
         }
 
-        public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = []) {
-            assert(b.type(of: label).Is(.label(args.map({b.type(of: $0)}))), "label type \(b.type(of: label)) doesn't match argument types \(args.map({b.type(of: $0)}))")
-            b.emit(WasmBranchIf(labelTypes: b.type(of: label).wasmLabelType!.parameters), withInputs: [label] + args + [condition])
+        public func wasmBranchIf(_ condition: Variable, to label: Variable, args: [Variable] = [], hint: WasmBranchHint = .None) {
+            let labelType = b.type(of: label)
+            checkArgumentsMatchLabelType(label: labelType, args: args)
+            assert(b.type(of: condition).Is(.wasmi32))
+            b.emit(WasmBranchIf(labelTypes: labelType.wasmLabelType!.parameters, hint: hint), withInputs: [label] + args + [condition])
         }
 
-        public func wasmBuildIfElse(_ condition: Variable, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
-            b.emit(WasmBeginIf(), withInputs: [condition])
+        public func wasmBranchTable(on: Variable, labels: [Variable], args: [Variable]) {
+            let argumentTypes = args.map({b.type(of: $0)})
+            labels.forEach {
+                checkArgumentsMatchLabelType(label: b.type(of: $0), args: args)
+            }
+            b.emit(WasmBranchTable(labelTypes: argumentTypes, valueCount: labels.count - 1),
+                withInputs: labels + args + [on])
+        }
+
+        public func wasmBuildIfElse(_ condition: Variable, hint: WasmBranchHint = .None, ifBody: () -> Void, elseBody: (() -> Void)? = nil) {
+            b.emit(WasmBeginIf(hint: hint), withInputs: [condition])
             ifBody()
-            if let elseBody = elseBody {
+            if let elseBody {
                 b.emit(WasmBeginElse())
                 elseBody()
             }
             b.emit(WasmEndIf())
         }
 
-        public func wasmBuildIfElse(_ condition: Variable, signature: Signature, args: [Variable], ifBody: (Variable, [Variable]) -> Void, elseBody: (Variable, [Variable]) -> Void) {
-            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
+        public func wasmBuildIfElse(_ condition: Variable, signature: WasmSignature, args: [Variable], inverted: Bool, ifBody: (Variable, [Variable]) -> Void, elseBody: ((Variable, [Variable]) -> Void)? = nil) {
+            let beginBlock = b.emit(WasmBeginIf(with: signature, inverted: inverted),
+                withInputs: args + [condition],
+                types: signature.parameterTypes + [.wasmi32])
             ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
-            let elseBlock = b.emit(WasmBeginElse(with: signature))
-            elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            if let elseBody {
+                let elseBlock = b.emit(WasmBeginElse(with: signature))
+                elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            }
             b.emit(WasmEndIf())
         }
 
         @discardableResult
-        public func wasmBuildIfElseWithResult(_ condition: Variable, signature: Signature, args: [Variable], ifBody: (Variable, [Variable]) -> Variable, elseBody: (Variable, [Variable]) -> Variable) -> Variable{
-            let beginBlock = b.emit(WasmBeginIf(with: signature), withInputs: args + [condition])
-            let trueResult = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
-            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: [trueResult])
-            let falseResult = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
-            return b.emit(WasmEndIf(outputType: signature.outputType), withInputs: [falseResult]).output
+        public func wasmBuildIfElseWithResult(_ condition: Variable, hint: WasmBranchHint = .None, signature: WasmSignature, args: [Variable], ifBody: (Variable, [Variable]) -> [Variable], elseBody: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            let beginBlock = b.emit(WasmBeginIf(with: signature, hint: hint), withInputs: args + [condition], types: signature.parameterTypes + [.wasmi32])
+            let trueResults = ifBody(beginBlock.innerOutput(0), Array(beginBlock.innerOutputs(1...)))
+            let elseBlock = b.emit(WasmBeginElse(with: signature), withInputs: trueResults, types: signature.outputTypes)
+            let falseResults = elseBody(elseBlock.innerOutput(0), Array(elseBlock.innerOutputs(1...)))
+            return Array(b.emit(WasmEndIf(outputTypes: signature.outputTypes), withInputs: falseResults, types: signature.outputTypes).outputs)
         }
 
         // The first output of this block is a label variable, which is just there to explicitly mark control-flow and allow branches.
-        public func wasmBuildLoop(with signature: Signature, body: (Variable, [Variable]) -> Void) {
+        public func wasmBuildLoop(with signature: WasmSignature, body: (Variable, [Variable]) -> Void) {
             let instr = b.emit(WasmBeginLoop(with: signature))
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndLoop())
         }
 
         @discardableResult
-        public func wasmBuildLoop(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Variable) -> Variable {
-            let instr = b.emit(WasmBeginLoop(with: signature), withInputs: args)
-            let fallthroughResult = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
-            return b.emit(WasmEndLoop(outputType: signature.outputType), withInputs: [fallthroughResult]).output
+        public func wasmBuildLoop(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            let instr = b.emit(WasmBeginLoop(with: signature), withInputs: args, types: signature.parameterTypes)
+            let fallthroughResults = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndLoop(outputTypes: signature.outputTypes), withInputs: fallthroughResults, types: signature.outputTypes).outputs)
         }
 
-        public func wasmBuildLegacyTry(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: ((Variable) -> Void)? = nil) {
-            assert(signature.parameters.count == args.count)
-            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
+        @discardableResult
+        func wasmBuildTryTable(with signature: WasmSignature, args: [Variable], catches: [WasmBeginTryTable.CatchKind], body: (Variable, [Variable]) -> [Variable]) -> [Variable] {
+            assert(zip(signature.parameterTypes, args).allSatisfy {b.type(of: $1).Is($0)})
+            #if DEBUG
+                var argIndex = signature.parameterTypes.count
+                for catchKind in catches {
+                    switch catchKind {
+                    case .Ref:
+                        assert(b.type(of: args[argIndex]).Is(.object(ofGroup: "WasmTag")))
+                        let labelType = b.type(of: args[argIndex + 1])
+                        assert(labelType.Is(.anyLabel))
+                        assert(labelType.wasmLabelType!.parameters.last!.Is(.wasmExnRef))
+                        argIndex += 2
+                    case .NoRef:
+                        assert(b.type(of: args[argIndex]).Is(.object(ofGroup: "WasmTag")))
+                        assert(b.type(of: args[argIndex + 1]).Is(.anyLabel))
+                        argIndex += 2
+                    case .AllRef:
+                        let labelType = b.type(of: args[argIndex])
+                        assert(labelType.Is(.anyLabel))
+                        assert(labelType.wasmLabelType!.parameters.last!.Is(.wasmExnRef))
+                        argIndex += 1
+                    case .AllNoRef:
+                        assert(b.type(of: args[argIndex]).Is(.anyLabel))
+                        argIndex += 1
+                    }
+                }
+            #endif
+            let instr = b.emit(WasmBeginTryTable(with: signature, catches: catches), withInputs: args)
+            let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndTryTable(outputTypes: signature.outputTypes), withInputs: results).outputs)
+        }
+
+        public func wasmBuildLegacyTry(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> Void, catchAllBody: ((Variable) -> Void)? = nil) {
+            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args, types: signature.parameterTypes)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             if let catchAllBody = catchAllBody {
-                let instr = b.emit(WasmBeginCatchAll(with: signature))
+                let instr = b.emit(WasmBeginCatchAll(inputTypes: signature.outputTypes))
                 catchAllBody(instr.innerOutput(0))
             }
             b.emit(WasmEndTry())
@@ -3235,52 +4037,68 @@ public class ProgramBuilder {
         // The lambda's inputs are the block label, the exception label (for rethrowing) and the
         // tag arguments.
         @discardableResult
-        public func wasmBuildLegacyTryWithResult(with signature: Signature, args: [Variable],
-                body: (Variable, [Variable]) -> Variable,
-                catchClauses: [(tag: Variable, body: (Variable, Variable, [Variable]) -> Variable)],
-                catchAllBody: ((Variable) -> Variable)? = nil) -> Variable {
-            assert(signature.parameters.count == args.count)
-            assert(signature.outputType != .nothing)
-            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args)
+        public func wasmBuildLegacyTryWithResult(with signature: WasmSignature, args: [Variable],
+                body: (Variable, [Variable]) -> [Variable],
+                catchClauses: [(tag: Variable, body: (Variable, Variable, [Variable]) -> [Variable])],
+                catchAllBody: ((Variable) -> [Variable])? = nil) -> [Variable] {
+            let instr = b.emit(WasmBeginTry(with: signature), withInputs: args, types: signature.parameterTypes)
             var result = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             for (tag, generator) in catchClauses {
-                let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputType), withInputs: [tag, result])
+                b.reportErrorIf(!b.type(of: tag).isWasmTagType,
+                    "Expected tag misses the WasmTagType extension for variable \(tag), typed \(b.type(of: tag)).")
+                let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => signature.outputTypes),
+                    withInputs: [tag] + result,
+                    types: [.object(ofGroup: "WasmTag")] + signature.outputTypes)
                 result = generator(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
             }
             if let catchAllBody = catchAllBody {
-                let instr = b.emit(WasmBeginCatchAll(with: signature), withInputs: [result])
+                let instr = b.emit(WasmBeginCatchAll(inputTypes: signature.outputTypes), withInputs: result, types: signature.outputTypes)
                 result = catchAllBody(instr.innerOutput(0))
             }
-            return b.emit(WasmEndTry(outputType: signature.outputType), withInputs: [result]).output
+            return Array(b.emit(WasmEndTry(outputTypes: signature.outputTypes), withInputs: result, types: signature.outputTypes).outputs)
         }
 
+        // Build a legacy catch block without a result type. Note that this may only be placed into
+        // try blocks that also don't have a result type. (Use wasmBuildLegacyTryWithResult to
+        // create a catch block with a result value.)
         public func WasmBuildLegacyCatch(tag: Variable, body: ((Variable, Variable, [Variable]) -> Void)) {
-            // TODO(mliedtke): A catch block can produce a result type, however that result type
-            // has to be in sync with the try result type (afaict).
-            let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => .nothing), withInputs: [tag])
+            b.reportErrorIf(!b.type(of: tag).isWasmTagType,
+                "Expected tag misses the WasmTagType extension for variable \(tag), typed \(b.type(of: tag)).")
+            let instr = b.emit(WasmBeginCatch(with: b.type(of: tag).wasmTagType!.parameters => []), withInputs: [tag], types: [.object(ofGroup: "WasmTag")])
             body(instr.innerOutput(0), instr.innerOutput(1), Array(instr.innerOutputs(2...)))
         }
 
         public func WasmBuildThrow(tag: Variable, inputs: [Variable]) {
             let tagType = b.type(of: tag).wasmType as! WasmTagType
-            assert(tagType.parameters.count == inputs.count)
-            b.emit(WasmThrow(parameters: tagType.parameters), withInputs: [tag] + inputs)
+            b.emit(WasmThrow(parameterTypes: tagType.parameters), withInputs: [tag] + inputs, types: [.object(ofGroup: "WasmTag")] + tagType.parameters)
         }
 
-        public func wasmBuildRethrow(_ exceptionLabel: Variable) {
-            assert(b.type(of: exceptionLabel).Is(.exceptionLabel))
-            b.emit(WasmRethrow(), withInputs: [exceptionLabel])
+        public func wasmBuildThrowRef(exception: Variable) {
+            b.emit(WasmThrowRef(), withInputs: [exception], types: [.wasmExnRef])
         }
 
-        public func wasmBuildLegacyTryDelegate(with signature: Signature, args: [Variable], body: (Variable, [Variable]) -> Void, delegate: Variable) {
-            assert(signature.parameters.count == args.count)
-            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args)
+        public func wasmBuildLegacyRethrow(_ exceptionLabel: Variable) {
+            b.emit(WasmRethrow(), withInputs: [exceptionLabel], types: [.exceptionLabel])
+        }
+
+        public func wasmBuildLegacyTryDelegate(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> Void, delegate: Variable) {
+            assert(signature.outputTypes.isEmpty)
+            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args, types: signature.parameterTypes)
             body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
             b.emit(WasmEndTryDelegate(), withInputs: [delegate])
         }
 
-        public func generateRandomWasmVar(ofType type: ILType) -> Variable {
-            // TODO: add externref and nullrefs
+        @discardableResult
+        public func wasmBuildLegacyTryDelegateWithResult(with signature: WasmSignature, args: [Variable], body: (Variable, [Variable]) -> [Variable], delegate: Variable) -> [Variable] {
+            let instr = b.emit(WasmBeginTryDelegate(with: signature), withInputs: args, types: signature.parameterTypes)
+            let results = body(instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return Array(b.emit(WasmEndTryDelegate(outputTypes: signature.outputTypes),
+                withInputs: [delegate] + results,
+                types: [.anyLabel] + signature.outputTypes
+            ).outputs)
+        }
+
+        public func generateRandomWasmVar(ofType type: ILType) -> Variable? {
             switch type {
             case .wasmi32:
                 return self.consti32(Int32(truncatingIfNeeded: b.randomInt()))
@@ -3293,8 +4111,32 @@ public class ProgramBuilder {
             case .wasmSimd128:
                 return self.constSimd128(value: (0 ..< 16).map{ _ in UInt8.random(in: UInt8.min ... UInt8.max) })
             default:
-                fatalError("unimplemented")
+                if type.Is(.wasmGenericRef) {
+                    // TODO(cffsmith): Can we improve this once we have better support for ad hoc
+                    // code generation in other contexts?
+                    switch type.wasmReferenceType?.kind {
+                    case .Abstract(let heapType):
+                        if heapType == .WasmI31 {
+                            // Prefer generating a non-null value.
+                            return probability(0.2) && type.wasmReferenceType!.nullability
+                                ? self.wasmRefNull(type: type)
+                                : self.wasmRefI31(self.consti32(Int32(truncatingIfNeeded: b.randomInt())))
+                        }
+                        assert(type.wasmReferenceType!.nullability)
+                        return self.wasmRefNull(type: type)
+                    case .Index(_),
+                         .none:
+                        break // Unimplemented
+                    }
+                } else {
+                    return nil
+                }
+                return nil
             }
+        }
+
+        public func findOrGenerateWasmVar(ofType type: ILType) -> Variable {
+            b.randomVariable(ofType: type) ?? generateRandomWasmVar(ofType: type)!
         }
 
         public func wasmUnreachable() {
@@ -3302,17 +4144,23 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func wasmSelect(type: ILType, on condition: Variable, trueValue: Variable, falseValue: Variable) -> Variable {
-            return b.emit(WasmSelect(type: type), withInputs: [trueValue, falseValue, condition]).output
+        public func wasmSelect(on condition: Variable, trueValue: Variable, falseValue: Variable) -> Variable {
+            let lhsType = b.type(of: trueValue)
+            return b.emit(WasmSelect(), withInputs: [trueValue, falseValue, condition], types: [lhsType, lhsType, .wasmi32]).output
+        }
+
+        public func wasmReturn(_ values: [Variable]) {
+            b.emit(WasmReturn(returnTypes: values.map(b.type)), withInputs: values, types: signature.outputTypes)
         }
 
         public func wasmReturn(_ returnVariable: Variable) {
             let returnType = b.type(of: returnVariable)
-            b.emit(WasmReturn(returnType: returnType), withInputs: [returnVariable])
+            b.emit(WasmReturn(returnTypes: [returnType]), withInputs: [returnVariable], types: signature.outputTypes)
         }
 
         public func wasmReturn() {
-            b.emit(WasmReturn(returnType: .nothing), withInputs: [])
+            assert(signature.outputTypes.isEmpty)
+            b.emit(WasmReturn(returnTypes: []), withInputs: [])
         }
 
         @discardableResult
@@ -3322,43 +4170,169 @@ public class ProgramBuilder {
 
         @discardableResult
         public func wasmSimd128IntegerUnOp(_ input: Variable, _ shape: WasmSimd128Shape, _ integerUnOpKind: WasmSimd128IntegerUnOpKind) -> Variable {
-            return b.emit(WasmSimd128IntegerUnOp(shape: shape, unOpKind: integerUnOpKind), withInputs: [input]).output
+            return b.emit(WasmSimd128IntegerUnOp(shape: shape, unOpKind: integerUnOpKind), withInputs: [input], types: [.wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmSimd128IntegerBinOp(_ left: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ integerBinOpKind: WasmSimd128IntegerBinOpKind) -> Variable {
-            return b.emit(WasmSimd128IntegerBinOp(shape: shape, binOpKind: integerBinOpKind), withInputs: [left, right]).output
+            // Shifts take an i32 as an rhs input, the others take a regular .wasmSimd128 input.
+            let rhsInputType: ILType = switch integerBinOpKind {
+            case .shl, .shr_s, .shr_u:
+                .wasmi32
+            default:
+                .wasmSimd128
+            }
+            return b.emit(WasmSimd128IntegerBinOp(shape: shape, binOpKind: integerBinOpKind), withInputs: [left, right], types: [.wasmSimd128, rhsInputType]).output
+        }
+
+        @discardableResult
+        public func wasmSimd128IntegerTernaryOp(_ left: Variable, _ mid: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ integerTernaryOpKind: WasmSimd128IntegerTernaryOpKind) -> Variable {
+            return b.emit(WasmSimd128IntegerTernaryOp(shape: shape, ternaryOpKind: integerTernaryOpKind), withInputs: [left, mid, right], types: [.wasmSimd128, .wasmSimd128, .wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmSimd128FloatUnOp(_ input: Variable, _ shape: WasmSimd128Shape, _ floatUnOpKind: WasmSimd128FloatUnOpKind) -> Variable {
-            return b.emit(WasmSimd128FloatUnOp(shape: shape, unOpKind: floatUnOpKind), withInputs: [input]).output
+            return b.emit(WasmSimd128FloatUnOp(shape: shape, unOpKind: floatUnOpKind), withInputs: [input], types: [.wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmSimd128FloatBinOp(_ left: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ floatBinOpKind: WasmSimd128FloatBinOpKind) -> Variable {
-            return b.emit(WasmSimd128FloatBinOp(shape: shape, binOpKind: floatBinOpKind), withInputs: [left, right]).output
+            return b.emit(WasmSimd128FloatBinOp(shape: shape, binOpKind: floatBinOpKind), withInputs: [left, right], types: [.wasmSimd128, .wasmSimd128]).output
+        }
+
+        @discardableResult
+        public func wasmSimd128FloatTernaryOp(_ left: Variable, _ mid: Variable, _ right: Variable, _ shape: WasmSimd128Shape, _ floatTernaryOpKind: WasmSimd128FloatTernaryOpKind) -> Variable {
+            return b.emit(WasmSimd128FloatTernaryOp(shape: shape, ternaryOpKind: floatTernaryOpKind), withInputs: [left, mid, right], types: [.wasmSimd128, .wasmSimd128, .wasmSimd128]).output
         }
 
         @discardableResult
         public func wasmSimd128Compare(_ lhs: Variable, _ rhs: Variable, _ shape: WasmSimd128Shape, _ compareOpKind: WasmSimd128CompareOpKind) -> Variable {
-            return b.emit(WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind), withInputs: [lhs, rhs]).output
+            return b.emit(WasmSimd128Compare(shape: shape, compareOpKind: compareOpKind), withInputs: [lhs, rhs], types: [.wasmSimd128, .wasmSimd128]).output
         }
 
         @discardableResult
-        public func wasmI64x2Splat(_ input: Variable) -> Variable {
-            return b.emit(WasmI64x2Splat(), withInputs: [input]).output
+        func wasmSimdSplat(kind: WasmSimdSplat.Kind, _ input: Variable) -> Variable {
+            return b.emit(WasmSimdSplat(kind), withInputs: [input], types: [kind.laneType()]).output
         }
 
         @discardableResult
-        public func wasmI64x2ExtractLane(_ input: Variable, _ lane: Int) -> Variable {
-            return b.emit(WasmI64x2ExtractLane(lane: lane), withInputs: [input]).output
+        func wasmSimdExtractLane(kind: WasmSimdExtractLane.Kind, _ input: Variable, _ lane: Int) -> Variable {
+            return b.emit(WasmSimdExtractLane(kind: kind, lane: lane), withInputs: [input], types: [.wasmSimd128]).output
+        }
+
+        @discardableResult
+        func wasmSimdReplaceLane(kind: WasmSimdReplaceLane.Kind, _ input: Variable, _ laneValue: Variable, _ lane: Int) -> Variable {
+            return b.emit(WasmSimdReplaceLane(kind: kind, lane: lane),
+                withInputs: [input, laneValue], types: [.wasmSimd128, kind.laneType()]).output
+        }
+
+        func wasmSimdStoreLane(kind: WasmSimdStoreLane.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64, from: Variable, lane: Int) {
+            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+            b.emit(WasmSimdStoreLane(kind: kind, staticOffset: staticOffset, lane: lane),
+                withInputs: [memory, dynamicOffset, from],
+                types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType, .wasmSimd128])
+        }
+
+        @discardableResult
+        func wasmSimdLoadLane(kind: WasmSimdLoadLane.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64, into: Variable, lane: Int) -> Variable {
+            let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
+            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmSimdLoadLane(kind: kind, staticOffset: staticOffset, lane: lane),
+                withInputs: [memory, dynamicOffset, into],
+                types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType, .wasmSimd128]).output
         }
 
         @discardableResult
         func wasmSimdLoad(kind: WasmSimdLoad.Kind, memory: Variable, dynamicOffset: Variable, staticOffset: Int64) -> Variable {
             let isMemory64 = b.type(of: memory).wasmMemoryType!.isMemory64
-            return b.emit(WasmSimdLoad(kind: kind, staticOffset: staticOffset, isMemory64: isMemory64), withInputs: [memory, dynamicOffset]).output
+            let dynamicOffsetType = isMemory64 ? ILType.wasmi64 : ILType.wasmi32
+            return b.emit(WasmSimdLoad(kind: kind, staticOffset: staticOffset),
+                withInputs: [memory, dynamicOffset],
+                types: [.object(ofGroup: "WasmMemory"), dynamicOffsetType]).output
+        }
+
+        @discardableResult
+        public func wasmArrayNewFixed(arrayType: Variable, elements: [Variable]) -> Variable {
+            let arrayDesc = b.jsTyper.getTypeDescription(of: arrayType) as! WasmArrayTypeDescription
+            assert(elements.allSatisfy {b.jsTyper.type(of: $0).Is(arrayDesc.elementType.unpacked())})
+            return b.emit(WasmArrayNewFixed(size: elements.count), withInputs: [arrayType] + elements).output
+        }
+
+        @discardableResult
+        public func wasmArrayNewDefault(arrayType: Variable, size: Variable) -> Variable {
+            return b.emit(WasmArrayNewDefault(), withInputs: [arrayType, size]).output
+        }
+
+        @discardableResult
+        public func wasmArrayLen(_ array: Variable) -> Variable {
+            return b.emit(WasmArrayLen(), withInputs: [array]).output
+        }
+
+        @discardableResult
+        public func wasmArrayGet(array: Variable, index: Variable, isSigned: Bool = false) -> Variable {
+            return b.emit(WasmArrayGet(isSigned: isSigned), withInputs: [array, index],
+                          types: [.wasmGenericRef, .wasmi32]).output
+        }
+
+        public func wasmArraySet(array: Variable, index: Variable, element: Variable) {
+            let arrayDesc = b.jsTyper.getTypeDescription(of: array) as! WasmArrayTypeDescription
+            assert(arrayDesc.mutability)
+            b.emit(WasmArraySet(), withInputs: [array, index, element],
+                   types: [.wasmGenericRef, .wasmi32, arrayDesc.elementType.unpacked()])
+        }
+
+        @discardableResult
+        public func wasmStructNewDefault(structType: Variable) -> Variable {
+            return b.emit(WasmStructNewDefault(), withInputs: [structType]).output
+        }
+
+        @discardableResult
+        public func wasmStructGet(theStruct: Variable, fieldIndex: Int, isSigned: Bool = false) -> Variable {
+            return b.emit(WasmStructGet(fieldIndex: fieldIndex, isSigned: isSigned), withInputs: [theStruct]).output
+        }
+
+        public func wasmStructSet(theStruct: Variable, fieldIndex: Int, value: Variable) {
+            let structDesc = b.jsTyper.getTypeDescription(of: theStruct) as! WasmStructTypeDescription
+            assert(structDesc.fields[fieldIndex].mutability)
+            b.emit(WasmStructSet(fieldIndex: fieldIndex), withInputs: [theStruct, value])
+        }
+
+        @discardableResult
+        public func wasmRefNull(type: ILType) -> Variable {
+            assert(type.isWasmReferenceType)
+            assert(type.wasmReferenceType!.isAbstract(), "index types must use .wasmRefNull(Variable)")
+            return b.emit(WasmRefNull(type: type)).output
+        }
+
+        @discardableResult
+        public func wasmRefNull(typeDef: Variable) -> Variable {
+            return b.emit(WasmRefNull(type: nil), withInputs: [typeDef]).output
+        }
+
+        @discardableResult
+        public func wasmRefIsNull(_ ref: Variable) -> Variable {
+            return b.emit(WasmRefIsNull(), withInputs: [ref], types: [.wasmGenericRef]).output
+        }
+
+        @discardableResult
+        public func wasmRefI31(_ number: Variable) -> Variable {
+            return b.emit(WasmRefI31(), withInputs: [number], types: [.wasmi32]).output
+        }
+
+        @discardableResult
+        public func wasmI31Get(_ refI31: Variable, isSigned: Bool) -> Variable {
+            return b.emit(WasmI31Get(isSigned: isSigned), withInputs: [refI31], types: [.wasmI31Ref]).output
+        }
+
+        @discardableResult
+        public func wasmAnyConvertExtern(_ ref: Variable) -> Variable {
+            b.emit(WasmAnyConvertExtern(), withInputs: [ref], types: [.wasmExternRef]).output
+        }
+
+        @discardableResult
+        public func wasmExternConvertAny(_ ref: Variable) -> Variable {
+            b.emit(WasmExternConvertAny(), withInputs: [ref], types: [.wasmAnyRef]).output
         }
     }
 
@@ -3366,19 +4340,13 @@ public class ProgramBuilder {
         private let b: ProgramBuilder
         public var methods: [String]
         public var functions: [WasmFunction]
+        // This is the stack of current active block signatures.
+        public var blockSignatures: Stack<WasmSignature>
         public var currentWasmFunction: WasmFunction {
             return functions.last!
         }
 
-        // TODO(evih): Allow multi-memories.
-        public var memory: Variable?
         private var moduleVariable: Variable?
-        /// This stores the type information for the `exports` property of the Wasm module.
-        private var exportsTypeInfo: ILType? = nil
-
-        public func setExportsTypeInfo(typeInfo: ILType) {
-            self.exportsTypeInfo = typeInfo
-        }
 
         public func getExportedMethod(at index: Int) -> String {
             return methods[index]
@@ -3386,7 +4354,7 @@ public class ProgramBuilder {
 
         public func getExportedMethods() -> [(String, Signature)] {
             assert(methods.count == functions.count)
-            return (0..<methods.count).map { (methods[$0], functions[$0].signature) }
+            return (0..<methods.count).map { (methods[$0], functions[$0].jsSignature) }
         }
 
         public func setModuleVariable(variable: Variable) {
@@ -3402,23 +4370,21 @@ public class ProgramBuilder {
             self.methods = [String]()
             self.moduleVariable = nil
             self.functions = []
+            self.blockSignatures = Stack()
         }
 
         @discardableResult
         public func loadExports() -> Variable {
             let exports = self.b.getProperty("exports", of: self.getModuleVariable())
-            b.setType(ofVariable: exports, to: self.exportsTypeInfo!)
-
             return exports
         }
 
         // TODO: distinguish between exported and non-exported functions
         @discardableResult
-        public func addWasmFunction(with signature: Signature, _ body: (WasmFunction, [Variable]) -> ()) -> Variable {
-            let functionBuilder = WasmFunction(forBuilder: b, withSignature: signature)
+        public func addWasmFunction(with signature: WasmSignature, _ body: (WasmFunction, Variable, [Variable]) -> [Variable]) -> Variable {
             let instr = b.emit(BeginWasmFunction(signature: signature))
-            body(functionBuilder, Array(instr.innerOutputs))
-            return b.emit(EndWasmFunction()).output
+            let results = body(currentWasmFunction, instr.innerOutput(0), Array(instr.innerOutputs(1...)))
+            return b.emit(EndWasmFunction(signature: signature), withInputs: results).output
         }
 
         @discardableResult
@@ -3427,9 +4393,27 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func addTable(elementType: ILType, minSize: Int, maxSize: Int? = nil, definedEntryIndices: [Int] = [], definedEntryValues: [Variable] = []) -> Variable {
-            return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntryIndices: definedEntryIndices), withInputs: definedEntryValues).output
+        public func addTable(elementType: ILType, minSize: Int, maxSize: Int? = nil, definedEntries: [WasmTableType.IndexInTableAndWasmSignature] = [], definedEntryValues: [Variable] = [], isTable64: Bool) -> Variable {
+            let inputTypes = Array(repeating: getEntryTypeForTable(elementType: elementType), count: definedEntries.count)
+            return b.emit(WasmDefineTable(elementType: elementType, limits: Limits(min: minSize, max: maxSize), definedEntries: definedEntries, isTable64: isTable64),
+                withInputs: definedEntryValues, types: inputTypes).output
         }
+
+        @discardableResult
+        public func addElementSegment(elements: [Variable]) -> Variable {
+            let inputTypes = Array(repeating: getEntryTypeForTable(elementType: ILType.wasmFuncRef), count: elements.count)
+            return b.emit(WasmDefineElementSegment(size: UInt32(elements.count)), withInputs: elements, types: inputTypes).output
+        }
+
+        public func getEntryTypeForTable(elementType: ILType) -> ILType {
+            switch elementType {
+                case .wasmFuncRef:
+                    return .wasmFunctionDef() | .function()
+                default:
+                    return .object()
+            }
+        }
+
 
         // This result can be ignored right now, as we can only define one memory per module
         // Also this should be tracked like a global / table.
@@ -3439,8 +4423,13 @@ public class ProgramBuilder {
         }
 
         @discardableResult
-        public func addTag(parameterTypes: ParameterList) -> Variable {
-            return b.emit(WasmDefineTag(parameters: parameterTypes)).output
+        public func addDataSegment(segment: [UInt8]) -> Variable {
+            return b.emit(WasmDefineDataSegment(segment: segment)).output
+        }
+
+        @discardableResult
+        public func addTag(parameterTypes: [ILType]) -> Variable {
+            return b.emit(WasmDefineTag(parameterTypes: parameterTypes)).output
         }
 
         private func getModuleVariable() -> Variable {
@@ -3456,68 +4445,133 @@ public class ProgramBuilder {
         return memoryTypeInfo.limits.min == 0
     }
 
+    // Returns 'dynamicOffset' and 'staticOffset' such that:
+    // 0 <= dynamicOffset + staticOffset <= memSize
+    //
+    // Note: In rare cases, the returned values may lead to an out-of-bounds memory access.
     func generateMemoryIndexes(forMemory memory: Variable) -> (Variable, Int64) {
+        return generateAlignedMemoryIndexes(forMemory: memory, alignment: 1)
+    }
+
+    // Returns 'dynamicOffset' and 'alignedStaticOffset' such that:
+    // 0 <= dynamicOffset + alignedStaticOffset <= memSize
+    // (dynamicOffset + alignedStaticOffset) % alignment == 0
+    //
+    // Note: In rare cases, the returned values may lead to an out-of-bounds memory access.
+    func generateAlignedMemoryIndexes(forMemory memory: Variable, alignment: Int64) -> (address: Variable, offset: Int64) {
+        assert(alignment > 0, "Alignment must be positive")
         let memoryTypeInfo = self.type(of: memory).wasmMemoryType!
-        let memSize = Int64(memoryTypeInfo.limits.min * WasmOperation.WasmConstants.specWasmMemPageSize)
+        let memSize = Int64(memoryTypeInfo.limits.min * WasmConstants.specWasmMemPageSize)
         let function = self.currentWasmModule.currentWasmFunction
+        if memSize < alignment {
+            // We can't generate in-bounds accesses here, so simply return address 0.
+            return (function.memoryArgument(0, memoryTypeInfo), 0)
+        }
 
-        // Generate an in-bounds offset (dynamicOffset + staticOffset) into the memory.
-        let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize)
-        let dynamicOffset = memoryTypeInfo.isMemory64 ? function.consti64(dynamicOffsetValue)
-                                                  : function.consti32(Int32(dynamicOffsetValue))
-        var staticOffset: Int64
-        if (dynamicOffsetValue == memSize) {
-            staticOffset = 0
+        // Generate an in-bounds offset (dynamicOffset + alignedStaticOffset) into the memory.
+        // The '+1' allows out-of-bounds access (dynamicOffset + alignedStaticOffset == memSize)
+        let dynamicOffsetValue = self.randomNonNegativeIndex(upTo: memSize - alignment + 1)
+        let dynamicOffset = function.memoryArgument(dynamicOffsetValue, memoryTypeInfo)
+        let staticOffset = self.randomNonNegativeIndex(upTo: memSize - alignment + 1 - dynamicOffsetValue)
+
+        let currentAddress = dynamicOffsetValue + staticOffset
+        // Calculate the minimal value needed to make the total address aligned.
+        let adjustment = (alignment - (currentAddress % alignment)) % alignment
+        let alignedStaticOffset = staticOffset + adjustment
+        return (dynamicOffset, alignedStaticOffset)
+    }
+
+    /// Produces a WasmGlobal that is valid to create in the given Context.
+    public func randomWasmGlobal(forContext context: Context) -> WasmGlobal {
+        switch context {
+        case .javascript:
+            // These are valid in JS according to: https://webassembly.github.io/spec/js-api/#globals.
+            // TODO: add simd128 and anyfunc.
+            return withEqualProbability(
+                {.wasmf32(Float32(self.randomFloat()))},
+                {.wasmf64(self.randomFloat())},
+                {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
+                {.wasmi64(self.randomInt())},
+                {.externref})
+        case .wasm:
+            // TODO: Add simd128 and nullrefs.
+            return withEqualProbability(
+                {.wasmf32(Float32(self.randomFloat()))},
+                {.wasmf64(self.randomFloat())},
+                {.wasmi32(Int32(truncatingIfNeeded: self.randomInt()))},
+                {.wasmi64(self.randomInt())},
+                {.externref},
+                {.exnref},
+                {.i31ref})
+        default:
+            fatalError("Unsupported context \(context) for a WasmGlobal.")
+        }
+    }
+
+    public func randomTagParameters() -> [ILType] {
+        // TODO(mliedtke): The list of types should be shared with function signature generation
+        // etc. We should also support non-nullable references but that requires being able
+        // to generate valid ones which currently isn't the case for most of them.
+        return (0..<Int.random(in: 0...10)).map {_ in chooseUniform(from: [
+            // Value types:
+            .wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128,
+            // Subset of abstract heap types (the null (bottom) types are not allowed in the JS API):
+            .wasmExternRef, .wasmFuncRef, .wasmAnyRef, .wasmEqRef, .wasmI31Ref, .wasmStructRef,
+            .wasmArrayRef, .wasmExnRef
+        ])}
+    }
+
+    public func randomWasmSignature() -> WasmSignature {
+        // TODO: generalize this to support more types. Also add support for simd128 and
+        // (null)exnref, note however that these types raise exceptions when used from JS.
+        let valueTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64]
+        let abstractRefTypes: [ILType] = [.wasmExternRef, .wasmAnyRef, .wasmI31Ref]
+        let nullTypes: [ILType] = [.wasmNullRef, .wasmNullExternRef, .wasmNullFuncRef]
+        let randomType = {
+            chooseUniform(
+                from: chooseBiased(from: [nullTypes, abstractRefTypes, valueTypes], factor: 1.5))
+        }
+        let returnTypes: [ILType] = (0..<Int.random(in: 0...3)).map {_ in randomType()}
+        let params: [ILType] = (0..<Int.random(in: 0...10)).map {_ in randomType()}
+        return params => returnTypes
+    }
+
+    public func randomWasmBlockOutputTypes(upTo n: Int) -> [ILType] {
+        // TODO(mliedtke): This should allow more types as well as non-nullable references for all
+        // abstract heap types. To be able to emit them, generateRandomWasmVar() needs to be able
+        // to generate a sequence that produces such a non-nullable value which might be difficult
+        // for some types as of now.
+        (0..<Int.random(in: 0...n)).map {_ in chooseUniform(from:
+            [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .wasmSimd128, .wasmRefI31]
+                + WasmAbstractHeapType.allCases.map {.wasmRef(.Abstract($0), nullability: true)})}
+    }
+
+    public func randomWasmBlockArguments(upTo n: Int) -> [Variable] {
+        (0..<Int.random(in: 0...n)).map {_ in findVariable {
+            // TODO(mliedtke): Also support wasm-gc types in wasm blocks.
+            // This requires updating the inner output types based on the input types.
+            type(of: $0).Is(.wasmPrimitive) && !type(of: $0).Is(.wasmGenericRef)
+        }}.filter {$0 != nil}.map {$0!}
+    }
+
+    public func randomWasmBranchHint() -> WasmBranchHint {
+        probability(0.8) ? .None : Bool.random() ? .Likely : .Unlikely
+    }
+
+    public func randomSimd128CompareOpKind(_ shape: WasmSimd128Shape) -> WasmSimd128CompareOpKind {
+        if shape.isFloat() {
+            return .fKind(value: chooseUniform(from: WasmFloatCompareOpKind.allCases))
         } else {
-            staticOffset = self.randomNonNegativeIndex(upTo: memSize) % (memSize - dynamicOffsetValue)
+            if shape == .i64x2 {
+                // i64x2 does not provide unsigned comparison.
+                return .iKind(value:
+                    chooseUniform(from: WasmIntegerCompareOpKind.allCases.filter{
+                        return $0 != .Lt_u && $0 != .Le_u && $0 != .Gt_u && $0 != .Ge_u
+                    }))
+            } else {
+                return .iKind(value: chooseUniform(from: WasmIntegerCompareOpKind.allCases))
+            }
         }
-
-        return (dynamicOffset, staticOffset)
-    }
-
-    public func randomWasmGlobal() -> WasmGlobal {
-        // TODO: Add simd128, extern ref and nullrefs.
-        withEqualProbability({
-            return .wasmf32(Float32(self.randomFloat()))
-        }, {
-            return .wasmf64(self.randomFloat())
-        }, {
-            return .wasmi32(Int32(truncatingIfNeeded: self.randomInt()))
-        }, {
-            return .wasmi64(self.randomInt())
-        })
-    }
-
-    public func randomTagParameters() -> ParameterList {
-        let numParams = Int.random(in: 0...10)
-        var params = ParameterList()
-        for _ in 0..<numParams {
-            // TODO(mliedtke): We should support externref and other types here. The list of types should be
-            // shared with function signature generation etc.
-            params.append(chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64]))
-        }
-        return params
-    }
-
-    public func randomWasmSignature() -> Signature {
-        // TODO: generalize this to support more types.
-        let returnType: ILType = chooseUniform(from: [.wasmi32, .wasmi64, .wasmf32, .wasmf64, .nothing])
-        let numParams = Int.random(in: 0...10)
-        var params = ParameterList()
-        for _ in 0..<numParams {
-            // TODO currently we don't emit .wasmi64 here as we don't yet have
-            // the correct signatures on the JavaScript side (i.e. for the
-            // exported function) and would therefore generate a lot of "Cannot
-            // convert XYZ to a BigInt" exceptions.
-            params.append(chooseUniform(from: [.wasmi32, .wasmf32, .wasmf64]))
-        }
-        return params => returnType
-    }
-
-    public func randomWasmBlockOutputType(allowVoid: Bool = true) -> ILType {
-        // TODO(mliedtke): The selection of types is in sync with ProgramBuilder::randomWasmSignature(). This should allow more types.
-        let possibleTypes: [ILType] = [.wasmi32, .wasmi64, .wasmf32, .wasmf64]
-        return chooseUniform(from: allowVoid ? possibleTypes + [.nothing] : possibleTypes)
     }
 
     @discardableResult
@@ -3528,6 +4582,72 @@ public class ProgramBuilder {
         emit(EndWasmModule())
 
         return module
+    }
+
+    @discardableResult
+    public func wasmDefineTypeGroup(typeGenerator: () -> [Variable]) -> [Variable] {
+        emit(WasmBeginTypeGroup())
+        let types = typeGenerator()
+        return Array(emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types).outputs)
+    }
+
+    @discardableResult
+    public func wasmDefineTypeGroup(recursiveGenerator: () -> ()) -> [Variable] {
+        emit(WasmBeginTypeGroup())
+        recursiveGenerator()
+        // Make all type definitions visible.
+        let types = scopes.top.filter {
+            let t = type(of: $0)
+            return t.Is(.wasmTypeDef()) && t.wasmTypeDefinition?.description != .selfReference
+        }
+        return Array(emit(WasmEndTypeGroup(typesCount: types.count), withInputs: types).outputs)
+    }
+
+    @discardableResult
+    func wasmDefineSignatureType(signature: WasmSignature, indexTypes: [Variable]) -> Variable {
+        return emit(WasmDefineSignatureType(signature: signature), withInputs: indexTypes).output
+    }
+
+    @discardableResult
+    func wasmDefineArrayType(elementType: ILType, mutability: Bool, indexType: Variable? = nil) -> Variable {
+        let inputs = indexType != nil ? [indexType!] : []
+        return emit(WasmDefineArrayType(elementType: elementType, mutability: mutability), withInputs: inputs).output
+    }
+
+    @discardableResult
+    func wasmDefineStructType(fields: [WasmStructTypeDescription.Field], indexTypes: [Variable]) -> Variable {
+        return emit(WasmDefineStructType(fields: fields), withInputs: indexTypes).output
+    }
+
+    @discardableResult
+    func wasmDefineForwardOrSelfReference() -> Variable {
+        return emit(WasmDefineForwardOrSelfReference()).output
+    }
+
+    func wasmResolveForwardReference(_ forwardReference: Variable, to: Variable) {
+        assert(type(of: forwardReference).wasmTypeDefinition?.description == .selfReference)
+        emit(WasmResolveForwardReference(), withInputs: [forwardReference, to])
+    }
+    // Converts an array to a string separating elements by comma. This is used for testing only.
+    func arrayToStringForTesting(_ array: Variable) -> Variable {
+        let stringified = callMethod("map", on: array,
+                withArgs: [buildArrowFunction(with: .parameters(n: 1)) { args in
+            doReturn(callMethod("toString", on: args[0]))
+        }])
+        return callMethod("join", on: stringified, withArgs: [loadString(",")])
+    }
+
+    func wasmDefineAndResolveForwardReference(recursiveGenerator: () -> ()) {
+        let previousTypes = Set(scopes.elementsStartingAtTop().joined().filter {type(of: $0).Is(.wasmTypeDef())})
+        let ref = wasmDefineForwardOrSelfReference()
+        recursiveGenerator()
+        let newTypes = scopes.elementsStartingAtTop().joined().filter {
+            let t = type(of: $0)
+            return !previousTypes.contains($0) && t.Is(.wasmTypeDef()) && t.wasmTypeDefinition?.description != .selfReference
+        }
+        if !newTypes.isEmpty {
+            wasmResolveForwardReference(ref, to: chooseUniform(from: newTypes))
+        }
     }
 
     /// Returns the next free variable.
@@ -3553,7 +4673,7 @@ public class ProgramBuilder {
     /// Set the parameter types for the next function, method, or constructor, which must be the the start of a function or method definition.
     /// Parameter types (and signatures in general) are only valid for the duration of the program generation, as they cannot be preserved across mutations.
     /// As such, the parameter types are linked to their instruction through the index of the instruction in the program.
-    private func setParameterTypesForNextSubroutine(_ parameterTypes: ParameterList) {
+    public func setParameterTypesForNextSubroutine(_ parameterTypes: ParameterList) {
         jsTyper.setParameters(forSubroutineStartingAt: code.count, to: parameterTypes)
     }
 
@@ -3633,6 +4753,8 @@ public class ProgramBuilder {
             activeClassDefinitions.top.instanceComputedProperties.append(instr.input(0))
         case .beginClassInstanceMethod(let op):
             activeClassDefinitions.top.instanceMethods.append(op.methodName)
+        case .beginClassInstanceComputedMethod:
+            activeClassDefinitions.top.instanceComputedMethods.append(instr.input(0))
         case .beginClassInstanceGetter(let op):
             activeClassDefinitions.top.instanceGetters.append(op.propertyName)
         case .beginClassInstanceSetter(let op):
@@ -3645,6 +4767,8 @@ public class ProgramBuilder {
             activeClassDefinitions.top.staticComputedProperties.append(instr.input(0))
         case .beginClassStaticMethod(let op):
             activeClassDefinitions.top.staticMethods.append(op.methodName)
+        case .beginClassStaticComputedMethod:
+            activeClassDefinitions.top.staticComputedMethods.append(instr.input(0))
         case .beginClassStaticGetter(let op):
             activeClassDefinitions.top.staticGetters.append(op.propertyName)
         case .beginClassStaticSetter(let op):
@@ -3679,20 +4803,55 @@ public class ProgramBuilder {
             activeWasmModule = WasmModule(in: self)
         case .endWasmModule:
             activeWasmModule!.setModuleVariable(variable: instr.output)
-            // We store the type information that we collect about this module separately in the module.
-            // This allows us to `setType` the correct type when we want to load the `exports` property of the WasmModule
-            activeWasmModule!.setExportsTypeInfo(typeInfo: self.jsTyper.activeWasmModuleDefinition!.getExportsType())
             activeWasmModule = nil
         case .endWasmFunction:
             activeWasmModule!.methods.append("w\(activeWasmModule!.methods.count)")
         case .wasmDefineGlobal(_),
              .wasmDefineTable(_),
-             .wasmDefineMemory(_):
+             .wasmDefineMemory(_),
+             .wasmDefineDataSegment(_),
+             .wasmDefineElementSegment(_):
             break
         case .wasmDefineTag(_):
             break
         case .beginWasmFunction(let op):
             activeWasmModule!.functions.append(WasmFunction(forBuilder: self, withSignature: op.signature))
+        case .wasmBeginIf(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginBlock(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginLoop(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginTry(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginTryDelegate(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmBeginTryTable(let op):
+            activeWasmModule!.blockSignatures.push(op.signature)
+        case .wasmEndIf(_),
+             .wasmEndLoop(_),
+             .wasmEndTry(_),
+             .wasmEndTryDelegate(_),
+             .wasmEndTryTable(_),
+             .wasmEndBlock(_):
+            activeWasmModule!.blockSignatures.pop()
+        case .beginPlainFunction(_),
+             .beginArrowFunction(_),
+             .beginAsyncArrowFunction(_),
+             .beginAsyncFunction(_),
+             .beginAsyncGeneratorFunction(_),
+             .beginCodeString(_),
+             .beginGeneratorFunction(_):
+            assert(instr.numOutputs == 1)
+            lastFunctionVariables.push(instr.output)
+        case .endPlainFunction(_),
+             .endArrowFunction(_),
+             .endAsyncArrowFunction(_),
+             .endAsyncFunction(_),
+             .endAsyncGeneratorFunction(_),
+             .endCodeString(_),
+             .endGeneratorFunction(_):
+            lastFunctionVariables.pop()
 
         default:
             assert(!instr.op.requiredContext.contains(.objectLiteral))
@@ -3702,4 +4861,444 @@ public class ProgramBuilder {
             break
         }
     }
+
+    // Some APIs accept ObjectGroups that are not produced by other APIs,
+    // so we instead register a generator that allows the fuzzer a greater chance of generating
+    // one when needed.
+    //
+    // These can be registered on the JavaScriptEnvironment with addProducingGenerator()
+    @discardableResult
+    func createOptionsBag(_ bag: OptionsBag) -> Variable {
+        // We run .filter() to pick a subset of fields, but we generally want to set as many as possible
+        // and let the mutator prune things
+        let dict: [String : Variable] = bag.properties.filter {_ in probability(0.8)}.mapValues {
+            if $0.isEnumeration {
+                return loadEnum($0)
+            // relativeTo doesn't have an ObjectGroup so we cannot just register a producingGenerator for it
+            } else if $0.Is(OptionsBag.jsTemporalRelativeTo) {
+                return findOrGenerateType(chooseUniform(from: [.jsTemporalZonedDateTime, .jsTemporalPlainDateTime,
+                                          .jsTemporalPlainDate, .string]))
+            } else {
+                return findOrGenerateType($0)
+            }
+        }
+        return createObject(with: dict)
+    }
+
+    // Generate a Temporal.Duration object
+    @discardableResult
+    func createTemporalDurationFieldsObject() -> Variable {
+        var properties: [String : Variable] = [:]
+        // Durations are simple, they accept an object with optional integer fields for each duration field.
+        for field in ["years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds", "nanoseconds"] {
+            if Bool.random() {
+                properties[field] = randomVariable(forUseAs: .number)
+            }
+        }
+        return createObject(with: properties)
+    }
+
+    // Generate a random time zone identifier
+    @discardableResult
+    func randomTimeZone() -> Variable {
+        return loadString(ProgramBuilder.randomTimeZoneString(), customName: "TemporalTimeZoneString")
+    }
+
+    @discardableResult
+    static func randomTimeZoneString() -> String {
+        // Bias towards knownTimeZoneIdentifiers since it's a larger array
+        if probability(0.7) {
+            return chooseUniform(from: TimeZone.knownTimeZoneIdentifiers)
+        } else {
+            return chooseUniform(from: TimeZone.abbreviationDictionary.keys)
+        }
+    }
+
+    @discardableResult
+    func randomUTCOffset(mayHaveSeconds: Bool) -> Variable {
+        return loadString(ProgramBuilder.randomUTCOffsetString(mayHaveSeconds: mayHaveSeconds), customName: "TemporalTimeZoneString")
+    }
+
+    @discardableResult
+    static func randomUTCOffsetString(mayHaveSeconds: Bool) -> String {
+        let hours = Int.random(in: 0..<24)
+        // Bias towards zero minutes since that's what most time zones do.
+        let zeroMinutes = probability(0.8)
+        let minutes = zeroMinutes ? 0 : Int.random(in: 0..<60)
+        let plusminus = Bool.random() ? "+" : "-";
+        var offset = String(format: "%@%02d:%02d", plusminus, hours, minutes)
+        if !zeroMinutes && mayHaveSeconds && probability(0.3) {
+            let seconds = Int.random(in: 0..<60)
+            offset = String(format: "%@:%02d", offset, seconds)
+            if  probability(0.3) {
+                offset = String(format: "%@:.%09d", offset, Int.random(in: 0...999999999))
+            }
+        }
+        return offset
+    }
+
+    // Generate an object with fields from
+    // https://tc39.es/proposal-temporal/#table-temporal-calendar-fields-record-fields
+    //
+    // with() will error when given a calendar; so we allow control over omitting
+    // a `calendar` field.
+    @discardableResult
+    func createTemporalFieldsObject(forWith: Bool, dateFields: Bool, timeFields: Bool, zonedFields: Bool) -> Variable {
+        var properties: [String : Variable] = [:]
+
+        if dateFields {
+            var chosenCalendar: String? = nil
+
+            // The "calendar" field is forbidden for `with`
+            // and will produce an early error
+            if !forWith && Bool.random() {
+                // TODO(Manishearth) share code with PlainDate once https://chrome-internal-review.googlesource.com/c/v8/fuzzilli/+/8534116/
+                // lands
+                chosenCalendar = chooseUniform(from: [
+                    "buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic",
+                    "ethiopic-amete-alem", "gregory", "hebrew", "indian", "islamic-civil",
+                    "islamic-tbla", "islamic-umalqura", "islamicc", "iso8601", "japanese",
+                    "persian", "roc"])
+                properties["calendar"] = loadString(chosenCalendar!)
+            }
+
+            if probability(0.8) {
+                properties["year"] = randomVariable(forUseAs: .integer)
+            }
+
+            // If the "year" is set, reduce the chance of emitting an "eraYear" which in most cases
+            // would contradict.
+            let eraProbability = properties["year"] == nil ? 0.8 : 0.2;
+            if probability(eraProbability) {
+                properties["eraYear"] = randomVariable(forUseAs: .integer)
+                // https://tc39.es/proposal-intl-era-monthcode/#table-eras
+                let gregoryEras = ["ce", "bce", "ad", "bc"]
+                let japaneseEras = ["reiwa", "heisei", "showa", "taisho", "meiji"]
+                let rocEras = ["roc", "broc", "minguo", "before-roc", "minguo-qian"]
+                // If we know the calendar, we should choose from the list of valid eras.
+                let eras = switch chosenCalendar {
+                    case "buddhist":
+                        ["be"]
+                    case "coptic":
+                        ["am"]
+                    case "ethioaa", "ethiopic":
+                        ["aa", "am", "mundi", "incar"]
+                    case "gregory":
+                        gregoryEras
+                    case "indian":
+                        ["shaka"]
+                    case "islamic-civil", "islamicc", "islamic-umalqura", "islamic-tbla":
+                        ["ah", "bh"]
+                    case "japanese":
+                        gregoryEras + japaneseEras
+                    case "persian":
+                        ["ap"]
+                    case "roc":
+                        rocEras
+                    default:
+                        ["be", "am", "aa", "mundi", "incar", "shaka", "ah", "bh", "ap"] + gregoryEras + japaneseEras + rocEras
+                }
+                properties["era"] = loadString(chooseUniform(from: eras))
+            }
+
+
+            if probability(0.8) {
+                // Sometimes generates out of range values to test "constrain"
+                // behavior.
+                properties["month"] = loadInt(Int64.random(in: 0...14))
+            }
+
+            // We don't wish to have clashing month/monthCode
+            // *most* of the time, but we still wish to also test those codepaths.
+            let monthCodeProbability = properties["month"] == nil ? 0.8 : 0.2;
+            if probability(monthCodeProbability) {
+                // Month codes go from M00 to M13.
+                var code = String(format: "M%02d", Int.random(in: 0...13))
+                if probability(0.3) || code == "M00" {
+                    // leap months have an L
+                    code += "L"
+                }
+                properties["monthCode"] = loadString(code)
+            }
+
+            if probability(0.8) {
+                properties["day"] = loadInt(Int64.random(in: 0...35))
+            }
+        }
+
+        // These are occasionally generated to be out of range to test "constrain"
+        // behavior.
+        if timeFields {
+            if probability(0.8) {
+                properties["hour"] = loadInt(Int64.random(in: 0..<26))
+            }
+            if probability(0.8) {
+                properties["minute"] = loadInt(Int64.random(in: 0..<65))
+            }
+            if probability(0.8) {
+                properties["second"] = loadInt(Int64.random(in: 0..<65))
+            }
+            if probability(0.8) {
+                properties["millisecond"] = loadInt(Int64.random(in: 0..<1010))
+            }
+            if probability(0.8) {
+                properties["microsecond"] = loadInt(Int64.random(in: 0..<1010))
+            }
+            if probability(0.8) {
+                properties["nanosecond"] = loadInt(Int64.random(in: 0..<1010))
+            }
+
+        }
+        // timeZone
+        if zonedFields {
+            var generatedOffset: Variable? = nil
+            // ZonedDateTime must be constructed with a timeZone property.
+            // but ZonedDateTime.with will always reject a timeZone.
+            //
+            // This is because ZonedDateTime.with is about partially replacing
+            // calendar fields: and operations like "change the day and also the
+            // time zone" are ambiguous based on whether you change the day first
+            // or the time zone first (and it's not a *useful* ambiguity).
+            // Instead, you are expected to use `.with()` and `.withTimeZone()`
+            // in whatever order you need.
+            if (!forWith) {
+                if Bool.random() {
+                    // Time zones can be offsets, but cannot have seconds
+                    generatedOffset = randomUTCOffset(mayHaveSeconds: false)
+                    properties["timeZone"] = generatedOffset
+                } else {
+                    properties["timeZone"] = randomTimeZone()
+                }
+            }
+
+            // Most of the time mixing a random offset and timezone
+            // will cause uninteresting errors since they need to match.
+            // If our timezone was a UTC offset, then there's not much harm
+            // in setting the field (it matches!), but otherwise we should generate offsets
+            // with a low probability.
+            if generatedOffset != nil && Bool.random() {
+                // Half the time when we've generated an offset, set the offset field too, it won't clash.
+                properties["offset"] = generatedOffset!
+            } else if probability(0.3) {
+                // Otherwise, with a low probability, generate a random offset.
+                properties["offset"] = randomUTCOffset(mayHaveSeconds: true)
+            }
+        }
+        return createObject(with: properties)
+    }
+
+    @discardableResult
+    func constructTemporalInstant() -> Variable {
+        let temporal = createNamedVariable(forBuiltin: "Temporal")
+        let useConstructor = Bool.random()
+        let constructor = getProperty("Instant", of: temporal)
+        if useConstructor {
+            let nanoseconds = randomVariable(forUseAs: .bigint)
+            return construct(constructor, withArgs: [nanoseconds])
+        } else {
+            // TODO(manishearth, 439921647) Generate Temporal-like strings
+            let string = randomVariable(forUseAs: .string)
+            return callMethod("from", on: constructor, withArgs: [string])
+        }
+    }
+
+    @discardableResult
+    func constructTemporalDuration() -> Variable {
+        let temporal = createNamedVariable(forBuiltin: "Temporal")
+        let useConstructor = Bool.random()
+        let constructor = getProperty("Duration", of: temporal)
+        if useConstructor {
+            // Constructor takes between 0 and 10 integer args
+            let numArgs = Int.random(in: 0...10)
+            let args = (0..<numArgs).map { _ in randomVariable(forUseAs: .number) }
+            return construct(constructor, withArgs: args)
+        } else {
+            // Whether to pass a Temporal-like object or a string
+            if Bool.random() {
+                let fields = createTemporalDurationFieldsObject()
+                return callMethod("", on: constructor, withArgs: [ fields ] )
+            } else {
+                // TODO(manishearth, 439921647) Generate Temporal-like strings
+                let string = randomVariable(forUseAs: .string)
+                return callMethod("from", on: constructor, withArgs: [string])
+             }
+         }
+    }
+
+    // Generic generators for Temporal date/time types.
+    // Pass in a closure that knows how to construct the type with `new()`.
+    private func constructTemporalType(type: String,
+                            dateFields: Bool, timeFields: Bool, zonedFields: Bool, optionsBag: OptionsBag,
+                            generateWithConstructor: (Variable) -> Variable) -> Variable {
+        let temporal = createNamedVariable(forBuiltin: "Temporal")
+        let useConstructor = Bool.random()
+        let constructor = getProperty(type, of: temporal)
+        if useConstructor {
+            return generateWithConstructor(constructor)
+        } else {
+            // Whether to pass a Temporal-like object or a string
+            if Bool.random() {
+                let fields = createTemporalFieldsObject(forWith: false, dateFields: dateFields, timeFields: timeFields, zonedFields: zonedFields)
+                var args = [fields]
+                if Bool.random() {
+                    args.append(createOptionsBag(optionsBag))
+                }
+                return callMethod("from", on: constructor, withArgs: args )
+            } else {
+                // TODO(manishearth, 439921647) Generate Temporal-like strings
+                let string = randomVariable(forUseAs: .string)
+                return callMethod("from", on: constructor, withArgs: [string])
+            }
+        }
+    }
+
+    @discardableResult
+    func constructTemporalTime() -> Variable {
+        return constructTemporalType(type: "PlainTime", dateFields: false, timeFields: true, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes between 0 and 6 integer args.
+            let numArgs = Int.random(in: 0...6)
+            // Should we be constraining these to valid range?
+            let args = (0..<numArgs).map { _ in randomVariable(forUseAs: .number) }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
+    @discardableResult
+    func constructTemporalYearMonth() -> Variable {
+        return constructTemporalType(type: "PlainYearMonth", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 int args, an optional calendar, and an optional reference day.
+            var args = (0..<3).map {_ in randomVariable(forUseAs: .integer) }
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+                if Bool.random() {
+                    args.append(randomVariable(forUseAs: .integer))
+                }
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+    @discardableResult
+    func constructTemporalMonthDay() -> Variable {
+        return constructTemporalType(type: "PlainMonthDay", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 int args, an optional calendar, and an optional reference day.
+            var args = (0..<3).map {_ in randomVariable(forUseAs: .integer) }
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+                if Bool.random() {
+                    args.append(randomVariable(forUseAs: .integer))
+                }
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
+    @discardableResult
+    func constructTemporalDate() -> Variable {
+        return constructTemporalType(type: "PlainDate", dateFields: true, timeFields: false, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 int args and an optional calendar.
+            var args = (0..<3).map {_ in randomVariable(forUseAs: .integer) }
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+    @discardableResult
+    func constructTemporalDateTime() -> Variable {
+        return constructTemporalType(type: "PlainDateTime", dateFields: true, timeFields: true, zonedFields: false, optionsBag: .jsTemporalOverflowSettings) { constructor in
+            // The constructor takes 3 mandatory integer args and between 0 and 6 additional integer args.
+            let timeArgs = Int.random(in: 0...6)
+            let totalIntArgs = 3 + timeArgs
+            var args = (0..<totalIntArgs).map { _ in randomVariable(forUseAs: .number) }
+            if timeArgs == 6 && Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
+    @discardableResult
+    func constructTemporalZonedDateTime() -> Variable {
+        return constructTemporalType(type: "ZonedDateTime", dateFields: true, timeFields: true, zonedFields: true, optionsBag: .jsTemporalZonedInterpretationSettings) { constructor in
+            // The constructor takes one integer arg, one timezone arg, one optional calendar arg.
+            // TODO(manishearth, 439921647) Generate timezone strings
+            var args = [randomVariable(forUseAs: .bigint), randomVariable(forUseAs: .string)]
+            if Bool.random() {
+                args.append(randomVariable(forUseAs: .jsTemporalCalendarEnum))
+            }
+            return construct(constructor, withArgs: args)
+        }
+    }
+
+    @discardableResult
+    static func constructIntlLocaleString() -> String {
+        // TODO(Manishearth) Generate more interesting locales than just the builtins
+        return chooseUniform(from: Locale.availableIdentifiers)
+    }
+
+    // Obtained by calling Intl.supportedValuesOf("unit") in a browser
+    fileprivate static let allUnits = ["acre", "bit", "byte", "celsius", "centimeter", "day", "degree", "fahrenheit", "fluid-ounce", "foot", "gallon", "gigabit", "gigabyte", "gram", "hectare", "hour", "inch", "kilobit", "kilobyte", "kilogram", "kilometer", "liter", "megabit", "megabyte", "meter", "microsecond", "mile", "mile-scandinavian", "milliliter", "millimeter", "millisecond", "minute", "month", "nanosecond", "ounce", "percent", "petabyte", "pound", "second", "stone", "terabit", "terabyte", "week", "yard", "year"]
+
+    @discardableResult
+    static func constructIntlUnit() -> String {
+        let firstUnit = chooseUniform(from: allUnits)
+        // Intl is able to format combinations of units too, like hectares-per-gallon
+        if probability(0.7) {
+            return firstUnit
+        } else {
+            return "\(firstUnit)-per-\(chooseUniform(from: allUnits))"
+        }
+    }
+
+    // Generic generators for Intl types.
+    private func constructIntlType(type: String, optionsBag: OptionsBag) -> Variable {
+        let intl = createNamedVariable(forBuiltin: "Intl")
+        let constructor = getProperty(type, of: intl)
+
+        var args: [Variable] = []
+        if probability(0.7) {
+            args.append(findOrGenerateType(.jsIntlLocaleLike))
+
+            if probability(0.7) {
+                args.append(createOptionsBag(optionsBag))
+            }
+        }
+        return construct(constructor, withArgs: args)
+    }
+
+    @discardableResult
+    func constructIntlDateTimeFormat() -> Variable {
+        return constructIntlType(type: "DateTimeFormat", optionsBag: .jsIntlDateTimeFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlCollator() -> Variable {
+        return constructIntlType(type: "Collator", optionsBag: .jsIntlCollatorSettings)
+    }
+
+    @discardableResult
+    func constructIntlListFormat() -> Variable {
+        return constructIntlType(type: "ListFormat", optionsBag: .jsIntlListFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlNumberFormat() -> Variable {
+        return constructIntlType(type: "NumberFormat", optionsBag: .jsIntlNumberFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlPluralRules() -> Variable {
+        return constructIntlType(type: "PluralRules", optionsBag: .jsIntlPluralRulesSettings)
+    }
+
+    @discardableResult
+    func constructIntlRelativeTimeFormat() -> Variable {
+        return constructIntlType(type: "RelativeTimeFormat", optionsBag: .jsIntlRelativeTimeFormatSettings)
+    }
+
+    @discardableResult
+    func constructIntlSegmenter() -> Variable {
+        return constructIntlType(type: "Segmenter", optionsBag: .jsIntlSegmenterSettings)
+    }
 }
+

@@ -54,7 +54,7 @@ public struct Fuzzilli_Protobuf_LogMessage: Sendable {
   public init() {}
 }
 
-public struct Fuzzilli_Protobuf_FuzzerState: @unchecked Sendable {
+public struct Fuzzilli_Protobuf_FuzzerState: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -62,6 +62,8 @@ public struct Fuzzilli_Protobuf_FuzzerState: @unchecked Sendable {
   public var corpus: Data = Data()
 
   public var evaluatorState: Data = Data()
+
+  public var isWasmEnabled: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -169,12 +171,6 @@ public struct Fuzzilli_Protobuf_Statistics: @unchecked Sendable {
     set {_uniqueStorage()._correctnessRate = newValue}
   }
 
-  //// The JIT Trigger rate of recently generated programs 
-  public var jitTriggerRate: Double {
-    get {return _storage._jitTriggerRate}
-    set {_uniqueStorage()._jitTriggerRate = newValue}
-  }
-
   //// The timeout rate of recently generated programs (number of timeouts divided by number of generated programs).
   public var timeoutRate: Double {
     get {return _storage._timeoutRate}
@@ -194,12 +190,7 @@ fileprivate let _protobuf_package = "fuzzilli.protobuf"
 
 extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LogMessage"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "origin"),
-    2: .same(proto: "level"),
-    3: .same(proto: "label"),
-    4: .same(proto: "content"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}origin\0\u{1}level\0\u{1}label\0\u{1}content\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -244,10 +235,7 @@ extension Fuzzilli_Protobuf_LogMessage: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FuzzerState"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "corpus"),
-    2: .same(proto: "evaluatorState"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}corpus\0\u{1}evaluatorState\0\u{1}isWasmEnabled\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -257,6 +245,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBytesField(value: &self.corpus) }()
       case 2: try { try decoder.decodeSingularBytesField(value: &self.evaluatorState) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.isWasmEnabled) }()
       default: break
       }
     }
@@ -269,12 +258,16 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
     if !self.evaluatorState.isEmpty {
       try visitor.visitSingularBytesField(value: self.evaluatorState, fieldNumber: 2)
     }
+    if self.isWasmEnabled != false {
+      try visitor.visitSingularBoolField(value: self.isWasmEnabled, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Fuzzilli_Protobuf_FuzzerState, rhs: Fuzzilli_Protobuf_FuzzerState) -> Bool {
     if lhs.corpus != rhs.corpus {return false}
     if lhs.evaluatorState != rhs.evaluatorState {return false}
+    if lhs.isWasmEnabled != rhs.isWasmEnabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -282,26 +275,7 @@ extension Fuzzilli_Protobuf_FuzzerState: SwiftProtobuf.Message, SwiftProtobuf._M
 
 extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Statistics"
-  public static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "totalSamples"),
-    2: .same(proto: "validSamples"),
-    3: .same(proto: "interestingSamples"),
-    4: .same(proto: "timedOutSamples"),
-    5: .same(proto: "crashingSamples"),
-    6: .same(proto: "totalExecs"),
-    7: .same(proto: "avgCorpusSize"),
-    8: .same(proto: "avgProgramSize"),
-    9: .same(proto: "avgCorpusProgramSize"),
-    10: .same(proto: "avgExecutionTime"),
-    11: .same(proto: "execsPerSecond"),
-    12: .same(proto: "fuzzerOverhead"),
-    13: .same(proto: "minimizationOverhead"),
-    14: .same(proto: "numChildNodes"),
-    15: .same(proto: "coverage"),
-    16: .same(proto: "correctnessRate"),
-    17: .same(proto: "jitTriggerRate"),
-    18: .same(proto: "timeoutRate"),
-  ]
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}totalSamples\0\u{1}validSamples\0\u{1}interestingSamples\0\u{1}timedOutSamples\0\u{1}crashingSamples\0\u{1}totalExecs\0\u{1}avgCorpusSize\0\u{1}avgProgramSize\0\u{1}avgCorpusProgramSize\0\u{1}avgExecutionTime\0\u{1}execsPerSecond\0\u{1}fuzzerOverhead\0\u{1}minimizationOverhead\0\u{1}numChildNodes\0\u{1}coverage\0\u{1}correctnessRate\0\u{1}timeoutRate\0")
 
   fileprivate class _StorageClass {
     var _totalSamples: UInt64 = 0
@@ -320,7 +294,6 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
     var _numChildNodes: UInt64 = 0
     var _coverage: Double = 0
     var _correctnessRate: Double = 0
-    var _jitTriggerRate: Double = 0
     var _timeoutRate: Double = 0
 
       // This property is used as the initial default value for new instances of the type.
@@ -348,7 +321,6 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       _numChildNodes = source._numChildNodes
       _coverage = source._coverage
       _correctnessRate = source._correctnessRate
-      _jitTriggerRate = source._jitTriggerRate
       _timeoutRate = source._timeoutRate
     }
   }
@@ -384,8 +356,7 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         case 14: try { try decoder.decodeSingularUInt64Field(value: &_storage._numChildNodes) }()
         case 15: try { try decoder.decodeSingularDoubleField(value: &_storage._coverage) }()
         case 16: try { try decoder.decodeSingularDoubleField(value: &_storage._correctnessRate) }()
-        case 17: try { try decoder.decodeSingularDoubleField(value: &_storage._jitTriggerRate) }()
-        case 18: try { try decoder.decodeSingularDoubleField(value: &_storage._timeoutRate) }()
+        case 17: try { try decoder.decodeSingularDoubleField(value: &_storage._timeoutRate) }()
         default: break
         }
       }
@@ -442,11 +413,8 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
       if _storage._correctnessRate.bitPattern != 0 {
         try visitor.visitSingularDoubleField(value: _storage._correctnessRate, fieldNumber: 16)
       }
-      if _storage._jitTriggerRate.bitPattern != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._jitTriggerRate, fieldNumber: 17)
-      }
       if _storage._timeoutRate.bitPattern != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._timeoutRate, fieldNumber: 18)
+        try visitor.visitSingularDoubleField(value: _storage._timeoutRate, fieldNumber: 17)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -473,7 +441,6 @@ extension Fuzzilli_Protobuf_Statistics: SwiftProtobuf.Message, SwiftProtobuf._Me
         if _storage._numChildNodes != rhs_storage._numChildNodes {return false}
         if _storage._coverage != rhs_storage._coverage {return false}
         if _storage._correctnessRate != rhs_storage._correctnessRate {return false}
-        if _storage._jitTriggerRate != rhs_storage._jitTriggerRate {return false}
         if _storage._timeoutRate != rhs_storage._timeoutRate {return false}
         return true
       }

@@ -34,7 +34,7 @@ public class FixupMutator: RuntimeAssistedMutator {
     private static let verbose = true
 
     // The FixupMutator will attempt to fix all guarded instructions (to hopefully remove the guards) and this percentage of unguarded (but fixable) instructions.
-    private let probabilityOfFixingUnguardedInstruction = defaultProbabilityOfFixingUnguardedInstruction
+    private let probabilityOfFixingUnguardedInstruction = 0.5
 
     // Average success rate: the rate of guarded operations that were turned into unguarded ones, including any try-catch blocks that were removed entirely.
     private var averageSuccesRate = MovingAverage(n: 1000)
@@ -90,7 +90,7 @@ public class FixupMutator: RuntimeAssistedMutator {
         func maybeFixup(_ instr: Instruction, performing op: ActionOperation, guarded: Bool, withInputs inputs: [Action.Input], with b: ProgramBuilder) {
             // Only instrument some percentage of unguarded instructions but do still instrument all guarded instructions (to attempt to remove the guards).
             if !guarded {
-                if !probability(defaultProbabilityOfFixingUnguardedInstruction) {
+                if !probability(probabilityOfFixingUnguardedInstruction) {
                     b.append(instr)
                     return
                 }
@@ -146,6 +146,9 @@ public class FixupMutator: RuntimeAssistedMutator {
 
             case .deleteProperty(let op):
                 maybeFixup(instr, performing: .DeleteProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
+
+            case .setProperty(let op):
+                maybeFixup(instr, performing: .SetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .string(value: op.propertyName)], with: b)
 
             case .getElement(let op):
                 maybeFixup(instr, performing: .GetProperty, guarded: op.isGuarded, withInputs: [.argument(index: 0), .int(value: op.index)], with: b)
