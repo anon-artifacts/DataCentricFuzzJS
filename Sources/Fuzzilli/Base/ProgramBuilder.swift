@@ -1673,8 +1673,18 @@ public class ProgramBuilder {
                 state.nextRecursiveBlockOfCurrentGenerator = 1
                 state.totalRecursiveBlocksOfCurrentGenerator = nil
 
+
                 // Select a random generator and run it.
+                // Defensive guard for empty generator list
+                // Defensive guard: avoid trap when generator list is empty
+                // Defensive guard for empty generator list
+                if availableGenerators.isEmpty {
+                    logger.warning("No available generators in current context (visible vars: \(numberOfVisibleVariables)). Skipping this build step.")
+                    return   // simply skip this iteration instead of crashing
+                }
+
                 let generator = availableGenerators.randomElement()
+
                 buildLog?.startAction(generator.name)
                 run(generator)
 

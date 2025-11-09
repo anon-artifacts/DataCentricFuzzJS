@@ -120,7 +120,7 @@ public class FuzzEngine: ComponentBase {
                     if let parent = parent {
                         let retained = predictedRetained(parent, program)
                         added = retained
-                        print(retained)
+                        //print(retained)
                         if retained{
                             fuzzer.dispatchEvent(fuzzer.events.InterestingProgramFound, data: (program, .local))
                             program.contributors.generatedInterestingSample()

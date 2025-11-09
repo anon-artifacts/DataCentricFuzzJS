@@ -58,9 +58,7 @@ swift run -c release FuzzilliCli \
     --corpusImportMode=full \
     --timeout=400 \
     --exportStatistics \
-    --minMutationsPerSample=30 \
-    --maxRuntimeInHours=24 \
-    --consecutiveMutations=10 \
+    --maxRuntimeInHours=6 \
     --jobs=16 \
     --profile=v8 \
     v8/out/fuzzbuild/d8

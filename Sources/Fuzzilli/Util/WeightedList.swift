@@ -51,6 +51,16 @@ public struct WeightedList<Element>: Sequence {
     public func randomElement() -> Element {
         // Binary search: pick a random value between 0 and the sum of all weights, then find the
         // first element whose cumulative weight is less-than or equal to the selected one.
+
+        // Defensive guard for zero or empty weights
+        guard totalWeight > 0 else {
+            // Fallback: pick uniformly if all weights are zero
+            if elements.isEmpty {
+                fatalError("WeightedList: no elements available for selection")
+            }
+            return elements.randomElement()!.elem
+        }
+
         let v = Int.random(in: 0..<totalWeight)
 
         var low = 0
